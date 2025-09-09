@@ -27,9 +27,9 @@ import (
 	paramsproptypes "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	gaia "github.com/cosmos/gaia/v19/app"
-	gaiaparams "github.com/cosmos/gaia/v19/app/params"
-	metaprotocoltypes "github.com/cosmos/gaia/v19/x/metaprotocols/types"
+	gaia "github.com/maany-xyz/maany-provider/app"
+	gaiaparams "github.com/maany-xyz/maany-provider/app/params"
+	metaprotocoltypes "github.com/maany-xyz/maany-provider/x/metaprotocols/types"
 )
 
 const (

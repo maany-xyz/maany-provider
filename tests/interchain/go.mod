@@ -1,4 +1,4 @@
-module github.com/cosmos/gaia/v19/tests/interchain
+module github.com/maany-xyz/maany-provider/tests/interchain
 
 go 1.22.3
 

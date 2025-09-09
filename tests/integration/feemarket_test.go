@@ -14,8 +14,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/cosmos/gaia/v19/ante"
-	gaiaApp "github.com/cosmos/gaia/v19/app"
+	"github.com/maany-xyz/maany-provider/ante"
+	gaiaApp "github.com/maany-xyz/maany-provider/app"
 )
 
 const (

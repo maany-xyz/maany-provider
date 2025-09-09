@@ -1,4 +1,4 @@
-module github.com/cosmos/gaia/v19
+module github.com/maany-xyz/maany-provider
 
 go 1.22.6
 
@@ -33,7 +33,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.19.0
-	github.com/rakyll/statik v0.1.7
 	github.com/skip-mev/feemarket v1.1.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/cobra v1.8.1

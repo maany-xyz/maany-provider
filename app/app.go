@@ -3,12 +3,9 @@ package gaia
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/gorilla/mux"
-	"github.com/rakyll/statik/fs"
 	feemarketkeeper "github.com/skip-mev/feemarket/x/feemarket/keeper"
 	"github.com/spf13/cast"
 
@@ -19,7 +16,6 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/gogoproto/proto"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 	providertypes "github.com/cosmos/interchain-security/v5/x/ccv/provider/types"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
@@ -66,10 +62,10 @@ import (
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
-	gaiaante "github.com/cosmos/gaia/v19/ante"
-	"github.com/cosmos/gaia/v19/app/keepers"
-	"github.com/cosmos/gaia/v19/app/upgrades"
-	v19 "github.com/cosmos/gaia/v19/app/upgrades/v19"
+	gaiaante "github.com/maany-xyz/maany-provider/ante"
+	"github.com/maany-xyz/maany-provider/app/keepers"
+	"github.com/maany-xyz/maany-provider/app/upgrades"
+	v19 "github.com/maany-xyz/maany-provider/app/upgrades/v19"
 )
 
 var (
@@ -82,7 +78,6 @@ var (
 var (
 	_ runtime.AppI            = (*GaiaApp)(nil)
 	_ servertypes.Application = (*GaiaApp)(nil)
-	_ ibctesting.TestingApp   = (*GaiaApp)(nil)
 )
 
 // GaiaApp extends an ABCI application, but with most of its parameters exported.
@@ -459,11 +454,6 @@ func (app *GaiaApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APICo
 
 	// Register nodeservice grpc-gateway routes.
 	nodeservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
-
-	// register swagger API from root so that other applications can override easily
-	if err := server.RegisterSwaggerAPI(apiSvr.ClientCtx, apiSvr.Router, apiConfig.Swagger); err != nil {
-		panic(err)
-	}
 }
 
 // RegisterNodeService allows query minimum-gas-prices in app.toml
@@ -517,17 +507,6 @@ func (app *GaiaApp) setupUpgradeHandlers() {
 			),
 		)
 	}
-}
-
-// RegisterSwaggerAPI registers swagger route with API Server
-func RegisterSwaggerAPI(rtr *mux.Router) {
-	statikFS, err := fs.New()
-	if err != nil {
-		panic(err)
-	}
-
-	staticServer := http.FileServer(statikFS)
-	rtr.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", staticServer))
 }
 
 func (app *GaiaApp) OnTxSucceeded(_ sdk.Context, _, _ string, _ []byte, _ []byte) {
