@@ -82,6 +82,9 @@ import (
 	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+
+	blockrewardskeeper "github.com/maany-xyz/maany-provider/x/blockrewards/keeper"
+	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
 )
 
 type AppKeepers struct {
@@ -113,6 +116,7 @@ type AppKeepers struct {
 	AuthzKeeper           authzkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 	FeeMarketKeeper       *feemarketkeeper.Keeper
+	BlockRewardsKeeper 	 blockrewardskeeper.Keeper
 
 	// ICS
 	ProviderKeeper icsproviderkeeper.Keeper
@@ -298,6 +302,15 @@ func NewAppKeeper(
 		appKeepers.AccountKeeper,
 		&DefaultFeemarketDenomResolver{},
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+
+	appKeepers.BlockRewardsKeeper = blockrewardskeeper.NewKeeper(
+		appCodec,
+		appKeepers.keys[blockrewardsmoduletypes.StoreKey],
+    	appKeepers.BankKeeper,
+        *appKeepers.StakingKeeper,
+    	appKeepers.AccountKeeper,
 	)
 
 	// UpgradeKeeper must be created before IBCKeeper
@@ -580,6 +593,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ratelimittypes.ModuleName).WithKeyTable(ratelimittypes.ParamKeyTable())
 	paramsKeeper.Subspace(providertypes.ModuleName).WithKeyTable(providertypes.ParamKeyTable())
 	paramsKeeper.Subspace(wasmtypes.ModuleName)
+	paramsKeeper.Subspace(blockrewardsmoduletypes.ModuleName)
+
 
 	return paramsKeeper
 }

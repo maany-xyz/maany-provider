@@ -1,7 +1,7 @@
 syntax = "proto3";
 package gaia.metaprotocols;
 
-option go_package = "github.com/cosmos/gaia/x/metaprotocols/types";
+option go_package = "github.com/maany-xyz/maany-provider/x/metaprotocols/types";
 
 // ExtensionData is a data structure that can be used in transaction extensions.
 message ExtensionData {

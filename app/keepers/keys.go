@@ -31,6 +31,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
 )
 
 func (appKeepers *AppKeepers) GenerateKeys() {
@@ -62,6 +63,7 @@ func (appKeepers *AppKeepers) GenerateKeys() {
 		consensusparamtypes.StoreKey,
 		feemarkettypes.StoreKey,
 		wasmtypes.StoreKey,
+		blockrewardsmoduletypes.StoreKey,
 	)
 
 	// Define transient store keys

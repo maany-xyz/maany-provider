@@ -63,6 +63,9 @@ import (
 
 	"github.com/maany-xyz/maany-provider/x/metaprotocols"
 	metaprotocolstypes "github.com/maany-xyz/maany-provider/x/metaprotocols/types"
+
+	blockrewardsmodule "github.com/maany-xyz/maany-provider/x/blockrewards"
+	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
 )
 
 var maccPerms = map[string][]string{
@@ -80,6 +83,8 @@ var maccPerms = map[string][]string{
 	wasmtypes.ModuleName:              {authtypes.Burner},
 	feemarkettypes.ModuleName:         nil,
 	feemarkettypes.FeeCollectorName:   nil,
+	blockrewardsmoduletypes.ModuleName: {authtypes.Minter},
+
 }
 
 func appModules(
@@ -122,6 +127,8 @@ func appModules(
 		app.ProviderModule,
 		metaprotocols.NewAppModule(),
 		feemarket.NewAppModule(appCodec, *app.FeeMarketKeeper),
+		blockrewardsmodule.NewAppModule(appCodec, app.BlockRewardsKeeper),
+
 	}
 }
 
@@ -255,6 +262,7 @@ func orderEndBlockers() []string {
 		consensusparamtypes.ModuleName,
 		metaprotocolstypes.ModuleName,
 		wasmtypes.ModuleName,
+		blockrewardsmoduletypes.ModuleName,
 	}
 }
 
@@ -302,5 +310,6 @@ func orderInitBlockers() []string {
 		consensusparamtypes.ModuleName,
 		metaprotocolstypes.ModuleName,
 		wasmtypes.ModuleName,
+		blockrewardsmoduletypes.ModuleName,
 	}
 }

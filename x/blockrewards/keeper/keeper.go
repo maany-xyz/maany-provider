@@ -63,7 +63,7 @@ func (k Keeper) DistributeRewards(sdkCtx sdk.Context, ctx context.Context, rewar
     }
 
     accountAddress := sdk.AccAddress(proposerAccAddress)
-    // sdkCtx.Logger().Info("Proposer Account Address", "account_address", accountAddress.String())
+    sdkCtx.Logger().Info("Proposer Account Address", "account_address", accountAddress.String())
 
     // Send rewards
     err2 := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, "blockrewards", accountAddress, rewardAmount)
