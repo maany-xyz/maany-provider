@@ -85,6 +85,10 @@ import (
 
 	blockrewardskeeper "github.com/maany-xyz/maany-provider/x/blockrewards/keeper"
 	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
+
+	mintburn "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
+	mintburnmodule "github.com/maany-xyz/maany-provider/x/mintburn/module"
+	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 type AppKeepers struct {
@@ -131,6 +135,8 @@ type AppKeepers struct {
 	PFMRouterModule pfmrouter.AppModule
 	RateLimitModule ratelimit.AppModule
 	ProviderModule  icsprovider.AppModule
+	MintBurnKeeper  mintburn.Keeper
+
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper           capabilitykeeper.ScopedKeeper
@@ -372,6 +378,14 @@ func NewAppKeeper(
 
 	appKeepers.ProviderModule = icsprovider.NewAppModule(&appKeepers.ProviderKeeper, appKeepers.GetSubspace(providertypes.ModuleName))
 
+	appKeepers.MintBurnKeeper = mintburn.NewKeeper(
+		mintburntypes.ModuleName,
+		appKeepers.keys[mintburntypes.StoreKey],
+		appKeepers.BankKeeper, 
+		appKeepers.IBCKeeper.ChannelKeeper,
+		appKeepers.IBCKeeper.ConnectionKeeper, 
+		appKeepers.IBCKeeper.ClientKeeper,
+	)
 	// Register the proposal types
 	// Deprecated: Avoid adding new handlers, instead use the new proposal flow
 	// by granting the governance module the right to execute the message.
@@ -537,6 +551,7 @@ func NewAppKeeper(
 	)
 	transferStack = ratelimit.NewIBCMiddleware(appKeepers.RatelimitKeeper, transferStack)
 	transferStack = ibcfee.NewIBCMiddleware(transferStack, appKeepers.IBCFeeKeeper)
+	transferStack = mintburnmodule.NewIBCMiddleware(transferStack, appKeepers.MintBurnKeeper)
 
 	// Create ICAHost Stack
 	var icaHostStack porttypes.IBCModule = icahost.NewIBCModule(appKeepers.ICAHostKeeper)

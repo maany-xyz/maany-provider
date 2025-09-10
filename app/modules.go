@@ -66,24 +66,29 @@ import (
 
 	blockrewardsmodule "github.com/maany-xyz/maany-provider/x/blockrewards"
 	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
+
+	mintburnmodule "github.com/maany-xyz/maany-provider/x/mintburn/module"
+	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 var maccPerms = map[string][]string{
-	authtypes.FeeCollectorName:     nil,
-	distrtypes.ModuleName:          nil,
-	icatypes.ModuleName:            nil,
-	minttypes.ModuleName:           {authtypes.Minter},
-	stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-	stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-	govtypes.ModuleName:            {authtypes.Burner},
+	authtypes.FeeCollectorName:        nil,
+	distrtypes.ModuleName:             nil,
+	icatypes.ModuleName:               nil,
+	minttypes.ModuleName:              {authtypes.Minter},
+	stakingtypes.BondedPoolName:       {authtypes.Burner, authtypes.Staking},
+	stakingtypes.NotBondedPoolName:    {authtypes.Burner, authtypes.Staking},
+	govtypes.ModuleName:               {authtypes.Burner},
 	// liquiditytypes.ModuleName:         {authtypes.Minter, authtypes.Burner},
-	ibctransfertypes.ModuleName:       {authtypes.Minter, authtypes.Burner},
-	ibcfeetypes.ModuleName:            nil,
-	providertypes.ConsumerRewardsPool: nil,
-	wasmtypes.ModuleName:              {authtypes.Burner},
-	feemarkettypes.ModuleName:         nil,
-	feemarkettypes.FeeCollectorName:   nil,
+	ibctransfertypes.ModuleName:        {authtypes.Minter, authtypes.Burner},
+	ibcfeetypes.ModuleName:             nil,
+	providertypes.ConsumerRewardsPool:  nil,
+	wasmtypes.ModuleName:               {authtypes.Burner},
+	feemarkettypes.ModuleName:          nil,
+	feemarkettypes.FeeCollectorName:    nil,
 	blockrewardsmoduletypes.ModuleName: {authtypes.Minter},
+	mintburntypes.MintBurnModuleAccount:{authtypes.Minter, authtypes.Burner},
+
 
 }
 
@@ -128,6 +133,7 @@ func appModules(
 		metaprotocols.NewAppModule(),
 		feemarket.NewAppModule(appCodec, *app.FeeMarketKeeper),
 		blockrewardsmodule.NewAppModule(appCodec, app.BlockRewardsKeeper),
+		mintburnmodule.NewAppModule(appCodec, app.MintBurnKeeper, app.Logger()),
 
 	}
 }
@@ -311,5 +317,6 @@ func orderInitBlockers() []string {
 		metaprotocolstypes.ModuleName,
 		wasmtypes.ModuleName,
 		blockrewardsmoduletypes.ModuleName,
+		mintburntypes.ModuleName,
 	}
 }

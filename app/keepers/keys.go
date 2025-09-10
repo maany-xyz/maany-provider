@@ -32,6 +32,8 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	blockrewardsmoduletypes "github.com/maany-xyz/maany-provider/x/blockrewards/types"
+
+	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 func (appKeepers *AppKeepers) GenerateKeys() {
@@ -64,6 +66,7 @@ func (appKeepers *AppKeepers) GenerateKeys() {
 		feemarkettypes.StoreKey,
 		wasmtypes.StoreKey,
 		blockrewardsmoduletypes.StoreKey,
+		mintburntypes.StoreKey,
 	)
 
 	// Define transient store keys

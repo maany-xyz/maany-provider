@@ -7,3 +7,8 @@
 
 - Gov proposal times
 - block speed
+- val update block time
+
+# DevOps
+
+- loosing connection relayer
