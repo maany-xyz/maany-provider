@@ -51,7 +51,7 @@ ifeq ($(LEDGER_ENABLED),true)
   endif
 endif
 
-ifeq (cleveldb,$(findstring cleveldb,$(GAIA_BUILD_OPTIONS)))
+ifeq (cleveldb,$(findstring cleveldb,$(MAANY_BUILD_OPTIONS)))
   build_tags += gcc cleveldb
 endif
 build_tags += $(BUILD_TAGS)
@@ -64,20 +64,20 @@ build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
 # process linker flags
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=gaia \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=gaiad \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=maany \
+		  -X github.com/cosmos/cosmos-sdk/version.AppName=maanypd \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)" \
 			-X github.com/cometbft/cometbft/version.TMCoreSemVer=$(TM_VERSION)
 
-ifeq (cleveldb,$(findstring cleveldb,$(GAIA_BUILD_OPTIONS)))
+ifeq (cleveldb,$(findstring cleveldb,$(MAANY_BUILD_OPTIONS)))
   ldflags += -X github.com/cosmos/cosmos-sdk/types.DBBackend=cleveldb
 endif
 ifeq ($(LINK_STATICALLY),true)
   ldflags += -linkmode=external -extldflags "-Wl,-z,muldefs -static"
 endif
-ifeq (,$(findstring nostrip,$(GAIA_BUILD_OPTIONS)))
+ifeq (,$(findstring nostrip,$(MAANY_BUILD_OPTIONS)))
   ldflags += -w -s
 endif
 ldflags += $(LDFLAGS)
@@ -85,7 +85,7 @@ ldflags := $(strip $(ldflags))
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 # check for nostrip option
-ifeq (,$(findstring nostrip,$(GAIA_BUILD_OPTIONS)))
+ifeq (,$(findstring nostrip,$(MAANY_BUILD_OPTIONS)))
   BUILD_FLAGS += -trimpath
 endif
 
@@ -98,11 +98,19 @@ include contrib/devtools/Makefile
 ###                              Build                                      ###
 ###############################################################################
 
+
+REQUIRE_GO_MAJOR := 1
+REQUIRE_GO_MINOR := 22
+GO_SYSTEM_VERSION_MAJOR := $(shell go env GOVERSION | sed -E 's/go([0-9]+)\.([0-9]+).*/\1/')
+GO_SYSTEM_VERSION_MINOR := $(shell go env GOVERSION | sed -E 's/go([0-9]+)\.([0-9]+).*/\2/)
+
 check_version:
-ifneq ($(GO_SYSTEM_VERSION), $(REQUIRE_GO_VERSION))
-	@echo "ERROR: Go version 1.22 is required for $(VERSION) of Gaia."
-	exit 1
-endif
+	@echo "Detected Go $(GO_SYSTEM_VERSION_MAJOR).$(GO_SYSTEM_VERSION_MINOR)"
+	@if [ $(GO_SYSTEM_VERSION_MAJOR) -lt $(REQUIRE_GO_MAJOR) ] || \
+	    { [ $(GO_SYSTEM_VERSION_MAJOR) -eq $(REQUIRE_GO_MAJOR) ] && [ $(GO_SYSTEM_VERSION_MINOR) -lt $(REQUIRE_GO_MINOR) ]; }; then \
+	    echo "ERROR: Go >= $(REQUIRE_GO_MAJOR).$(REQUIRE_GO_MINOR) is required for $(VERSION) of Maany."; \
+	    exit 1; \
+	  fi
 
 all: install lint run-tests test-e2e vulncheck
 
@@ -136,7 +144,7 @@ endif
 draw-deps:
 	@# requires brew install graphviz or apt-get install graphviz
 	go install github.com/RobotsAndPencils/goviz
-	@goviz -i ./cmd/gaiad -d 2 | dot -Tpng -o dependency-graph.png
+	@goviz -i ./cmd/maanypd -d 2 | dot -Tpng -o dependency-graph.png
 
 clean:
 	rm -rf $(BUILDDIR)/ artifacts/
@@ -170,8 +178,8 @@ ifneq ($(strip $(TAG)),)
 		-e CGO_ENABLED=1 \
 		-e TM_VERSION=$(TM_VERSION) \
 		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
-		-v `pwd`:/go/src/gaiad \
-		-w /go/src/gaiad \
+		-v `pwd`:/go/src/maanypd \
+		-w /go/src/maanypd \
 		$(GORELEASER_IMAGE) \
 		release \
 		--snapshot \
@@ -193,8 +201,8 @@ goreleaser-build-local:
 		-e CGO_ENABLED=1 \
 		-e TM_VERSION=$(TM_VERSION) \
 		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
-		-v `pwd`:/go/src/gaiad \
-		-w /go/src/gaiad \
+		-v `pwd`:/go/src/maanypd \
+		-w /go/src/maanypd \
 		--platform=linux/amd64 \
 		$(GORELEASER_IMAGE) \
 		release \
@@ -214,8 +222,8 @@ ci-release:
 		-e GITHUB_TOKEN=$(GITHUB_TOKEN) \
 		-e TM_VERSION=$(TM_VERSION) \
 		-e COSMWASM_VERSION=$(COSMWASM_VERSION) \
-		-v `pwd`:/go/src/gaiad \
-		-w /go/src/gaiad \
+		-v `pwd`:/go/src/maanypd \
+		-w /go/src/maanypd \
 		--platform=linux/amd64 \
 		$(GORELEASER_IMAGE) \
 		release \
@@ -282,7 +290,7 @@ endif
 .PHONY: run-tests $(TEST_TARGETS)
 
 docker-build-debug:
-	@docker build -t cosmos/gaiad-e2e -f Dockerfile .
+	@docker build -t cosmos/maanypd-e2e -f Dockerfile .
 
 # TODO: Push this to the Cosmos Dockerhub so we don't have to keep building it
 # in CI.
@@ -319,17 +327,16 @@ format:
 ###############################################################################
 
 start-localnet-ci: build
-	rm -rf ~/.gaiad-liveness
-	./build/gaiad init liveness --chain-id liveness --home ~/.gaiad-liveness
-	./build/gaiad config set client chain-id liveness --home ~/.gaiad-liveness
-	./build/gaiad config set client keyring-backend test --home ~/.gaiad-liveness
-	./build/gaiad keys add val --home ~/.gaiad-liveness --keyring-backend test
-	./build/gaiad genesis add-genesis-account val 10000000000000000000000000stake --home ~/.gaiad-liveness --keyring-backend test
-	./build/gaiad genesis gentx val 1000000000stake --home ~/.gaiad-liveness --chain-id liveness --keyring-backend test
-	./build/gaiad genesis collect-gentxs --home ~/.gaiad-liveness
-	sed -i.bak'' 's/minimum-gas-prices = ""/minimum-gas-prices = "0uatom"/' ~/.gaiad-liveness/config/app.toml
-	./build/gaiad start --home ~/.gaiad-liveness --x-crisis-skip-assert-invariants
-
+	rm -rf ~/.maanypd-liveness
+	./build/maanypd init liveness --chain-id liveness --home ~/.maanypd-liveness
+	./build/maanypd config set client chain-id liveness --home ~/.maanypd-liveness
+	./build/maanypd config set client keyring-backend test --home ~/.maanypd-liveness
+	./build/maanypd keys add val --home ~/.maanypd-liveness --keyring-backend test
+	./build/maanypd genesis add-genesis-account val 10000000000000000000000000stake --home ~/.maanypd-liveness --keyring-backend test
+	./build/maanypd genesis gentx val 1000000000stake --home ~/.maanypd-liveness --chain-id liveness --keyring-backend test
+	./build/maanypd genesis collect-gentxs --home ~/.maanypd-liveness
+	sed -i.bak'' 's/minimum-gas-prices = ""/minimum-gas-prices = "umaany"/' ~/.maanypd-liveness/config/app.toml
+	./build/maanypd start --home ~/.maanypd-liveness --x-crisis-skip-assert-invariants
 .PHONY: start-localnet-ci
 
 ###############################################################################

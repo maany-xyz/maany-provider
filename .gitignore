@@ -7,7 +7,7 @@
 *.swn
 .vscode
 .idea
-
+.sh
 # Build
 artifacts
 vendor

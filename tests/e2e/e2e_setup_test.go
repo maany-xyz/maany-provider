@@ -53,7 +53,7 @@ const (
 	keysCommand    = "keys"
 	gaiaHomePath   = "/home/nonroot/.gaia"
 	photonDenom    = "photon"
-	uatomDenom     = types.UAtomDenom
+	uatomDenom     = types.BaseDenom
 	stakeDenom     = "stake"
 	initBalanceStr = "110000000000stake,100000000000000000photon,100000000000000000uatom"
 	minGasPrice    = "0.005"

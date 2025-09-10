@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	appconfig "github.com/maany-xyz/maany-provider/app/config"
+
 	feemarketkeeper "github.com/skip-mev/feemarket/x/feemarket/keeper"
 	"github.com/spf13/cast"
 
@@ -109,7 +111,12 @@ func init() {
 		panic(err)
 	}
 
-	DefaultNodeHome = filepath.Join(userHomeDir, ".gaia")
+	// default to ~/.<appname> (you set this via ldflags to maanypd earlier)
+	homeName := "." + version.AppName
+	if homeName == "." { homeName = ".maanypd" } // fallback
+	DefaultNodeHome = filepath.Join(userHomeDir, homeName)
+	appconfig.GetDefaultConfig()
+
 }
 
 // NewGaiaApp returns a reference to an initialized Gaia.
