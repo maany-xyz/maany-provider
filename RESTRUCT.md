@@ -1,7 +1,7 @@
 # Restructuring
 
-1. Move full account file here
-2. Test provider logic
+1. Configure blockrewards module
+2.
 
 # Before Live:
 

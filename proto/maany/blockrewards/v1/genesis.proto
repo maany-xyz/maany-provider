@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package maany.blockrewards.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+
+option go_package = "github.com/maany-xyz/maany-provider/x/blockrewards/types";
+
+// Params defines the parameters for the blockrewards module.
+message Params {
+  cosmos.base.v1beta1.Coin block_reward_amount = 1 [(gogoproto.nullable) = false];
+}
+
+// GenesisState defines the genesis state of the blockrewards module.
+message GenesisState {
+    Params params = 1 [(gogoproto.nullable) = false];
+}
