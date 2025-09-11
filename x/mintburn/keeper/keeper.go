@@ -1,15 +1,16 @@
-package mintburn
+package keeper
 
 import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
+	"github.com/cosmos/cosmos-sdk/codec"
+
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	bankKeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	connectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 
@@ -27,22 +28,26 @@ type ClientKeeper interface {
 
 
 type Keeper struct {
-    ModuleName string
-    StoreKey      storetypes.StoreKey
-    BankKeeper bankKeeper.Keeper
+    cdc            codec.BinaryCodec              
+    ModuleName       string
+    StoreKey         storetypes.StoreKey
+    accountKeeper    mintburntypes.AccountKeeper
+    bankKeeper       mintburntypes.BankKeeper
     ChannelKeeper    ChannelKeeper
 	ConnectionKeeper ConnectionKeeper
 	ClientKeeper     ClientKeeper
 
 }
 
-func NewKeeper(moduleName string, storeKey storetypes.StoreKey, bankKeeper bankKeeper.Keeper, channelKeeper ChannelKeeper,
+func NewKeeper(	cdc codec.BinaryCodec, moduleName string, storeKey storetypes.StoreKey, accountKeeper mintburntypes.AccountKeeper, bankKeeper mintburntypes.BankKeeper, channelKeeper ChannelKeeper,
 	connectionKeeper ConnectionKeeper,
 	clientKeeper ClientKeeper ) Keeper {
     return Keeper{
+        cdc:              cdc,
         ModuleName: moduleName,
         StoreKey:   storeKey,
-        BankKeeper: bankKeeper,
+        accountKeeper: accountKeeper,
+        bankKeeper: bankKeeper,
         ChannelKeeper:    channelKeeper,
 		ConnectionKeeper: connectionKeeper,
 		ClientKeeper:     clientKeeper,
@@ -54,39 +59,10 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", "x/-"+"mintburn")
 }
 
-func (k Keeper) MintTokens(ctx sdk.Context, recipient sdk.AccAddress, amount sdk.Coin) error {
-    // Mint tokens to the module account
-    ctx.Logger().Info("Now in MintTokens in Keeper")
-    err := k.BankKeeper.MintCoins(ctx, k.ModuleName, sdk.NewCoins(amount))
-    if err != nil {
-        return err
-    }
-
-    // Send minted tokens to the recipient
-    return k.BankKeeper.SendCoinsFromModuleToAccount(ctx, k.ModuleName, recipient, sdk.NewCoins(amount))
-}
-
-func (k Keeper) GetBalances(ctx sdk.Context, address sdk.AccAddress) error {
-    ctx.Logger().Info("Now in Get Balance in Keeper")
-    balances := k.BankKeeper.GetAllBalances(ctx, address)
-    ctx.Logger().Info("The transfer module account balances are: ", "balamces", balances.String())
-    return nil
-}
-
-func (k Keeper) BurnTokens(ctx sdk.Context, recipient sdk.AccAddress, amount sdk.Coin) error {
-
-    if err := k.BankKeeper.SendCoinsFromModuleToModule(ctx, ibctransfertypes.ModuleName, k.ModuleName, sdk.NewCoins(amount)); err != nil {
-		ctx.Logger().Error("Failed to redirect tokens to module account", "error", err)
-	    return err
-    }
-
-    return nil
-}
-
 // Provider keeper
 func (k Keeper) SendFromEscrowToAccount(ctx sdk.Context, escrow sdk.AccAddress, to sdk.AccAddress, coin sdk.Coin) error {
     // Move locked coins out of the ICS-20 escrow to the recipient
-    if err := k.BankKeeper.SendCoins(ctx, escrow, to, sdk.NewCoins(coin)); err != nil {
+    if err := k.bankKeeper.SendCoins(ctx, escrow, to, sdk.NewCoins(coin)); err != nil {
         return err
     }
     return nil
@@ -97,10 +73,36 @@ func (k Keeper) IsAllowedChannel(ctx sdk.Context, channelID string) bool {
 	return store.Has([]byte(channelID))
 }
 
-func (k Keeper) BurnEscrowedTokens(ctx sdk.Context, escrowAddr sdk.AccAddress, coin sdk.Coin) error {
-    	if err := k.BankKeeper.SendCoinsFromAccountToModule(ctx, escrowAddr, k.ModuleName, sdk.NewCoins(coin)); err != nil {
-		return err
-	}
+// Write one escrow (overwrites if exists)
+func (k Keeper) SetEscrow(ctx sdk.Context, e mintburntypes.Escrow) {
+	store := ctx.KVStore(k.StoreKey)
+	bz := k.cdc.MustMarshal(&e)                     
+	store.Set(mintburntypes.EscrowKey(e.ConsumerChainId, e.Amount.Denom), bz)
+}
 
-	return k.BankKeeper.BurnCoins(ctx, k.ModuleName, sdk.NewCoins(coin))
+// Read one escrow
+func (k Keeper) GetEscrow(ctx sdk.Context, consumerID, denom string) (mintburntypes.Escrow, bool) {
+	store := ctx.KVStore(k.StoreKey)
+	bz := store.Get(mintburntypes.EscrowKey(consumerID, denom))
+	if bz == nil {
+		return mintburntypes.Escrow{}, false
+	}
+	var e mintburntypes.Escrow
+	k.cdc.MustUnmarshal(bz, &e)                     
+	return e, true
+}
+
+// iterate all escrows (useful for queries)
+func (k Keeper) IterateEscrows(ctx sdk.Context, cb func(e mintburntypes.Escrow) (stop bool)) {
+	ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte(mintburntypes.EscrowPrefix+"/"))
+	it := ps.Iterator(nil, nil)
+	defer it.Close()
+
+	for ; it.Valid(); it.Next() {
+		var e mintburntypes.Escrow
+		k.cdc.MustUnmarshal(it.Value(), &e)
+		if cb(e) {
+			return
+		}
+	}
 }

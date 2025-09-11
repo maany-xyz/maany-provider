@@ -3,8 +3,8 @@ package mintburn
 import (
 	"encoding/json"
 
+	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	"cosmossdk.io/log"
-
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -13,79 +13,145 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
 	keeper "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
 	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 var (
-    _ module.AppModule      = (*AppModule)(nil)
-    _ module.AppModuleBasic = (*AppModuleBasic)(nil)
-    _ module.HasABCIGenesis = (*AppModule)(nil)
+	_ module.AppModule      = (*AppModule)(nil)
+	_ module.AppModuleBasic = (*AppModuleBasic)(nil)
+	_ module.HasABCIGenesis = (*AppModule)(nil)
 )
 
-// AppModuleBasic defines the basic application module used by the mintburn module.
+// -----------------------------
+// AppModuleBasic
+// -----------------------------
+
 type AppModuleBasic struct{}
 
-// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
 func (am AppModule) IsOnePerModuleType() {}
+func (am AppModule) IsAppModule()        {}
 
-func (am AppModule) IsAppModule() {}
+func (AppModuleBasic) Name() string { return mintburntypes.ModuleName }
 
-// Name returns the mintburn module's name.
-func (AppModuleBasic) Name() string {
-    return mintburntypes.ModuleName
+func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
+
+func (AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
+	mintburntypes.RegisterInterfaces(reg)
 }
 
-// RegisterLegacyAminoCodec registers the mintburn module's types for Amino.
-func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
-
-// RegisterInterfaces registers the mintburn module's interface types.
-func (AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {}
-
-// DefaultGenesis returns the mintburn module's default genesis state as raw bytes.
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-    return nil // Provide default genesis state if needed
+func (AppModuleBasic) DefaultGenesis(codec.JSONCodec) json.RawMessage {
+	return []byte(`{}`)
 }
 
-// ValidateGenesis validates the mintburn module's genesis state.
-func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
-    return nil
+func (AppModuleBasic) ValidateGenesis(codec.JSONCodec, client.TxEncodingConfig, json.RawMessage) error {
+	return nil
 }
 
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	// err := providertypes.RegisterQueryHandlerClient(context.Background(), mux, providertypes.NewQueryClient(clientCtx))
-	// if err != nil {
-	// 	// same behavior as in cosmos-sdk
-	// 	panic(err)
-	// }
+	// If/when you generate REST handlers, register them here with:
+	// _ = mintburntypes.RegisterQueryHandlerClient(context.Background(), mux, mintburntypes.NewQueryClient(clientCtx))
 }
 
-// AppModule implements the AppModule interface for the mintburn module.
+func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
+  return &autocliv1.ModuleOptions{
+    Query: &autocliv1.ServiceCommandDescriptor{
+      Service: "maany.mintburn.v1.Query",
+      RpcCommandOptions: []*autocliv1.RpcCommandOptions{
+        {
+          RpcMethod: "Escrow",
+          Use:       "escrow [consumer-chain-id] [denom]",
+          Short:     "Query a single escrow",
+          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
+            {ProtoField: "consumer_chain_id"},
+            {ProtoField: "denom"},
+          },
+        },
+        {
+          RpcMethod: "Escrows",
+          Use:       "escrows",
+          Short:     "List all escrows",
+          FlagOptions: map[string]*autocliv1.FlagOptions{
+            // key = proto field name
+            "status_filter": {Name: "status-filter", Usage: "PENDING|CLAIMED|CANCELED"},
+          },
+        },
+        {
+          RpcMethod: "EscrowProof",
+          Use:       "escrow-proof [consumer-chain-id] [denom]",
+          Short:     "Export ICS-23 proof bundle for an escrow",
+          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
+            {ProtoField: "consumer_chain_id"},
+            {ProtoField: "denom"},
+          },
+          // Avoid collision with global --height by renaming the flag
+          FlagOptions: map[string]*autocliv1.FlagOptions{
+            "height": {Name: "prove-height", Usage: "Provider block height to prove"},
+          },
+        },
+      },
+    },
+    Tx: &autocliv1.ServiceCommandDescriptor{
+      Service: "maany.mintburn.v1.Msg",
+      RpcCommandOptions: []*autocliv1.RpcCommandOptions{
+        {
+          RpcMethod: "EscrowInitial",
+          Use:       "escrow-initial [consumer-chain-id] [amount] [recipient(optional)]",
+          Short:     "Lock provider base tokens into escrow",
+          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
+            {ProtoField: "consumer_chain_id"},
+            {ProtoField: "amount"},
+            {ProtoField: "recipient", Optional: true},
+          },
+          FlagOptions: map[string]*autocliv1.FlagOptions{
+            "expiry_height":    {Name: "expiry-height"},
+            "expiry_time_unix": {Name: "expiry-time-unix"},
+          },
+        },
+        {
+          RpcMethod: "CancelEscrow",
+          Use:       "cancel-escrow [consumer-chain-id] [denom]",
+          Short:     "Cancel a pending escrow and refund",
+          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
+            {ProtoField: "consumer_chain_id"},
+            {ProtoField: "denom"},
+          },
+        },
+      },
+    },
+  }
+}
+
+// -----------------------------
+// AppModule
+// -----------------------------
+
 type AppModule struct {
 	cdc codec.Codec
-    AppModuleBasic
-    keeper keeper.Keeper
+	keeper keeper.Keeper
+	AppModuleBasic
 }
 
-// NewAppModule creates a new AppModule object.
-func NewAppModule(cdc codec.Codec, k keeper.Keeper, appLogger log.Logger) AppModule {
-    return AppModule{
-		cdc: cdc,
+func NewAppModule(cdc codec.Codec, k keeper.Keeper, _ log.Logger) AppModule {
+	return AppModule{
+		cdc:            cdc,
+		keeper:         k,
 		AppModuleBasic: AppModuleBasic{},
-        keeper: k,
-    }
+	}
 }
 
-// RegisterServices registers module services.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
+	mintburntypes.RegisterMsgServer(cfg.MsgServer(), am.keeper)
+	mintburntypes.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 }
 
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
-
-// ExportGenesis exports the genesis state for the mintburn module.
-// module.
-func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
+func (am AppModule) InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate {
 	return nil
 }
+
+func (am AppModule) ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage {
+	return []byte(`{}`)
+}
+
+func (am AppModule) ConsensusVersion() uint64 { return 1 }

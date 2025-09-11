@@ -1,0 +1,45 @@
+syntax = "proto3";
+package maany.mintburn.v1;
+
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+import "maany/mintburn/v1/escrow.proto"; 
+
+option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
+
+service Query {
+  rpc Escrow(QueryEscrowRequest) returns (QueryEscrowResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/escrows/{consumer_chain_id}/{denom}";
+  }
+  rpc Escrows(QueryEscrowsRequest) returns (QueryEscrowsResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/escrows";
+  }
+  // Helper to export ICS-23 proof bundle (height provided by caller)
+  rpc EscrowProof(QueryEscrowProofRequest) returns (QueryEscrowProofResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/escrow_proof/{consumer_chain_id}/{denom}";
+  }
+}
+
+message QueryEscrowRequest {
+  string consumer_chain_id = 1;
+  string denom = 2;
+}
+message QueryEscrowResponse { Escrow escrow = 1; }
+
+message QueryEscrowsRequest { string status_filter = 1; } // "PENDING"|"CLAIMED"|...
+message QueryEscrowsResponse { repeated Escrow escrows = 1; }
+
+message QueryEscrowProofRequest {
+  string consumer_chain_id = 1;
+  string denom = 2;
+  uint64 height = 3; // provider block height to prove
+}
+message QueryEscrowProofResponse {
+  uint64 height = 1;
+  bytes  key_path = 2;   // exact KV key
+  bytes  value = 3;      // protobuf-encoded Escrow (deterministic bytes)
+  bytes  proof_ops = 4;  // ICS-23 ProofOps
+  // Optional convenience: signed header & validator set for one-shot LC
+  bytes  tendermint_signed_header = 5;
+  bytes  tendermint_validator_set = 6;
+}

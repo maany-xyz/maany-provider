@@ -1,0 +1,33 @@
+syntax = "proto3";
+package maany.mintburn.v1;
+
+import "cosmos/base/v1beta1/coin.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/msg/v1/msg.proto";         
+import "cosmos_proto/cosmos.proto";      
+option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true; 
+  rpc EscrowInitial(MsgEscrowInitial) returns (MsgEscrowInitialResponse);
+  rpc CancelEscrow(MsgCancelEscrow) returns (MsgCancelEscrowResponse);
+}
+
+message MsgEscrowInitial {
+  option (cosmos.msg.v1.signer) = "sender"; 
+  string sender = 1;
+  string consumer_chain_id = 2;
+  cosmos.base.v1beta1.Coin amount = 3 [(gogoproto.nullable) = false]; // base denom on provider
+  string recipient = 4;         // optional
+  uint64 expiry_height = 5;     // optional
+  uint64 expiry_time_unix = 6;  // optional
+}
+message MsgEscrowInitialResponse {}
+
+message MsgCancelEscrow {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string consumer_chain_id = 2;
+  string denom = 3;
+}
+message MsgCancelEscrowResponse {}

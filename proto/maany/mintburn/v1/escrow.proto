@@ -1,0 +1,23 @@
+syntax = "proto3";
+package maany.mintburn.v1;
+
+import "cosmos/base/v1beta1/coin.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
+
+enum EscrowStatus {
+  ESCROW_STATUS_UNSPECIFIED = 0;
+  ESCROW_STATUS_PENDING     = 1; // locked, not yet claimed by consumer
+  ESCROW_STATUS_CLAIMED     = 2; // consumer minted; still locked as backing
+  ESCROW_STATUS_CANCELED    = 3; // returned to sender
+}
+
+message Escrow {
+  string consumer_chain_id = 1;
+  cosmos.base.v1beta1.Coin amount = 2 [(gogoproto.nullable) = false];
+  string recipient = 3;                 // optional; empty -> operator’s addr later distributes
+  uint64 expiry_height = 4;             // 0 = no expiry
+  uint64 expiry_time_unix = 5;          // 0 = no expiry
+  EscrowStatus status = 6;
+}

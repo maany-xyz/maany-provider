@@ -87,7 +87,7 @@ var maccPerms = map[string][]string{
 	feemarkettypes.ModuleName:          nil,
 	feemarkettypes.FeeCollectorName:    nil,
 	blockrewardsmoduletypes.ModuleName: {authtypes.Minter},
-	mintburntypes.MintBurnModuleAccount:{authtypes.Minter, authtypes.Burner},
+	mintburntypes.ModuleName:           {authtypes.Minter, authtypes.Burner},
 
 
 }

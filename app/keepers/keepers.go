@@ -379,9 +379,11 @@ func NewAppKeeper(
 	appKeepers.ProviderModule = icsprovider.NewAppModule(&appKeepers.ProviderKeeper, appKeepers.GetSubspace(providertypes.ModuleName))
 
 	appKeepers.MintBurnKeeper = mintburn.NewKeeper(
+		appCodec,
 		mintburntypes.ModuleName,
 		appKeepers.keys[mintburntypes.StoreKey],
-		appKeepers.BankKeeper, 
+		appKeepers.AccountKeeper,
+		appKeepers.BankKeeper,
 		appKeepers.IBCKeeper.ChannelKeeper,
 		appKeepers.IBCKeeper.ConnectionKeeper, 
 		appKeepers.IBCKeeper.ClientKeeper,
