@@ -33,7 +33,7 @@ jobs:
     runs-on: Gaia-Runner-medium
     needs: newbuild
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
@@ -57,7 +57,7 @@ jobs:
     runs-on: Gaia-Runner-medium
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.x
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/cache@v4.0.2
         with:
           path: ~/go/bin
