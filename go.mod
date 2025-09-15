@@ -37,8 +37,8 @@ require (
 	github.com/prometheus/client_golang v1.19.0
 	github.com/skip-mev/feemarket v1.1.0
 	github.com/spf13/cast v1.6.0
-	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.10.1
+	github.com/spf13/pflag v1.0.9
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240610135401-a8a62080eff3
@@ -257,5 +257,4 @@ replace (
 
 	// following versions might cause unexpected behavior
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-
 )
