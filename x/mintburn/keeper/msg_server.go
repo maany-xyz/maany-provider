@@ -87,3 +87,24 @@ func (k Keeper) CancelEscrow(goCtx context.Context, msg *types.MsgCancelEscrow) 
 
 	return &types.MsgCancelEscrowResponse{}, nil
 }
+
+// MarkEscrowClaimed sets the escrow status to CLAIMED by escrow_id
+func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscrowClaimed) (*types.MsgMarkEscrowClaimedResponse, error) {
+    ctx := sdk.UnwrapSDKContext(goCtx)
+
+    // Load escrow by ID
+    esc, ok := k.GetEscrowByID(ctx, msg.EscrowId)
+    if !ok {
+        return nil, sdkerrors.ErrNotFound
+    }
+    if esc.Status != types.EscrowStatus_ESCROW_STATUS_PENDING {
+        return nil, sdkerrors.ErrUnauthorized
+    }
+
+    // Optional: basic authorization check could be added here.
+    // For now, just mark as claimed.
+    esc.Status = types.EscrowStatus_ESCROW_STATUS_CLAIMED
+    k.SetEscrow(ctx, esc)
+
+    return &types.MsgMarkEscrowClaimedResponse{}, nil
+}

@@ -11,6 +11,8 @@ service Msg {
   option (cosmos.msg.v1.service) = true; 
   rpc EscrowInitial(MsgEscrowInitial) returns (MsgEscrowInitialResponse);
   rpc CancelEscrow(MsgCancelEscrow) returns (MsgCancelEscrowResponse);
+  // Mark an escrow as CLAIMED by its escrow_id
+  rpc MarkEscrowClaimed(MsgMarkEscrowClaimed) returns (MsgMarkEscrowClaimedResponse);
 }
 
 message MsgEscrowInitial {
@@ -31,3 +33,11 @@ message MsgCancelEscrow {
   string denom = 3;
 }
 message MsgCancelEscrowResponse {}
+
+// MsgMarkEscrowClaimed updates the status of an escrow to CLAIMED by id
+message MsgMarkEscrowClaimed {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string escrow_id = 2;
+}
+message MsgMarkEscrowClaimedResponse {}

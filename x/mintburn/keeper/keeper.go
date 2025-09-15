@@ -136,3 +136,18 @@ func (k Keeper) IterateEscrows(ctx sdk.Context, cb func(e mintburntypes.Escrow) 
 		}
 	}
 }
+
+// GetEscrowByID fetches an escrow by its primary id key
+func (k Keeper) GetEscrowByID(ctx sdk.Context, escrowID string) (mintburntypes.Escrow, bool) {
+    store := ctx.KVStore(k.StoreKey)
+    bz := store.Get(mintburntypes.EscrowKeyByID(escrowID))
+    if bz == nil {
+        return mintburntypes.Escrow{}, false
+    }
+    var e mintburntypes.Escrow
+    k.cdc.MustUnmarshal(bz, &e)
+    if e.EscrowId == "" {
+        e.EscrowId = escrowID
+    }
+    return e, true
+}

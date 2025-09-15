@@ -21,6 +21,7 @@ func NewTxCmd() *cobra.Command {
   cmd.AddCommand(
     NewEscrowInitialCmd(),
     NewCancelEscrowCmd(),
+    NewMarkEscrowClaimedCmd(),
   )
   return cmd
 }
@@ -61,6 +62,27 @@ func NewEscrowInitialCmd() *cobra.Command {
   flags.AddTxFlagsToCmd(cmd)
   cmd.Flags().Uint64("expiry-height", 0, "Optional expiry height")
   cmd.Flags().Uint64("expiry-time-unix", 0, "Optional expiry UNIX time")
+  return cmd
+}
+
+func NewMarkEscrowClaimedCmd() *cobra.Command {
+  cmd := &cobra.Command{
+    Use:   "mark-escrow-claimed [escrow-id]",
+    Short: "Mark an escrow as claimed by its id",
+    Args:  cobra.ExactArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+      clientCtx, err := client.GetClientTxContext(cmd)
+      if err != nil { return err }
+
+      msg := &mintburntypes.MsgMarkEscrowClaimed{
+        Sender:   clientCtx.GetFromAddress().String(),
+        EscrowId: args[0],
+      }
+      if err := msg.ValidateBasic(); err != nil { return err }
+      return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+    },
+  }
+  flags.AddTxFlagsToCmd(cmd)
   return cmd
 }
 

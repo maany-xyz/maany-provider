@@ -46,3 +46,14 @@ func (m *MsgCancelEscrow) ValidateBasic() error {
 	}
 	return nil
 }
+
+// ValidateBasic for MsgMarkEscrowClaimed
+func (m *MsgMarkEscrowClaimed) ValidateBasic() error {
+    if _, err := sdk.AccAddressFromBech32(m.Sender); err != nil {
+        return errorsmod.Wrapf(sdkerrors.ErrInvalidAddress, "sender: %v", err)
+    }
+    if strings.TrimSpace(m.EscrowId) == "" {
+        return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "escrow_id is required")
+    }
+    return nil
+}

@@ -6,8 +6,9 @@ import (
 )
 
 func RegisterInterfaces(reg codectypes.InterfaceRegistry) {
-	reg.RegisterImplementations((*sdk.Msg)(nil),
-		&MsgEscrowInitial{},
-		&MsgCancelEscrow{},
-	)
+    reg.RegisterImplementations((*sdk.Msg)(nil),
+        &MsgEscrowInitial{},
+        &MsgCancelEscrow{},
+        &MsgMarkEscrowClaimed{},
+    )
 }
