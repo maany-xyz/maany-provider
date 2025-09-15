@@ -23,6 +23,9 @@ docs/node_modules
 docs/versioned_docs
 docs/versioned_sidebars
 
+# genesismint entry for consumer genesis.json
+tools/mintburn-proofutil/bundle.json
+
 # Data - ideally these don't exist
 baseapp/data/*
 client/lcd/keys/*
