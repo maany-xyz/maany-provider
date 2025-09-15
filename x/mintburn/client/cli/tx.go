@@ -67,9 +67,9 @@ func NewEscrowInitialCmd() *cobra.Command {
 
 func NewMarkEscrowClaimedCmd() *cobra.Command {
   cmd := &cobra.Command{
-    Use:   "mark-escrow-claimed [escrow-id]",
+    Use:   "mark-escrow-claimed [escrow-id] [consumer-chain-id]",
     Short: "Mark an escrow as claimed by its id",
-    Args:  cobra.ExactArgs(1),
+    Args:  cobra.ExactArgs(2),
     RunE: func(cmd *cobra.Command, args []string) error {
       clientCtx, err := client.GetClientTxContext(cmd)
       if err != nil { return err }
@@ -77,6 +77,7 @@ func NewMarkEscrowClaimedCmd() *cobra.Command {
       msg := &mintburntypes.MsgMarkEscrowClaimed{
         Sender:   clientCtx.GetFromAddress().String(),
         EscrowId: args[0],
+        ConsumerChainId: args[1],
       }
       if err := msg.ValidateBasic(); err != nil { return err }
       return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

@@ -23,6 +23,9 @@ var EscrowPrefix = []byte{0x01}
 // Secondary index prefix: (consumer_chain_id, denom) -> escrow_id
 var EscrowIndexPrefix = []byte{0x02}
 
+// Authorized ICA address per consumer chain: consumer_chain_id -> bech32 addr bytes
+var AuthorizedICAPrefix = []byte{0x03}
+
 func EscrowKeyByID(escrowID string) []byte {
 	return append(EscrowPrefix, []byte(escrowID)...)
 }
@@ -35,4 +38,11 @@ func EscrowIndexKey(consumerChainID, denom string) []byte {
 	k = append(k, 0x00)
 	k = append(k, []byte(denom)...)
 	return k
+}
+
+func AuthorizedICAKey(consumerChainID string) []byte {
+    k := make([]byte, 0, len(AuthorizedICAPrefix)+len(consumerChainID))
+    k = append(k, AuthorizedICAPrefix...)
+    k = append(k, []byte(consumerChainID)...)
+    return k
 }

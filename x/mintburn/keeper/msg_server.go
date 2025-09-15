@@ -97,14 +97,45 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
     if !ok {
         return nil, sdkerrors.ErrNotFound
     }
-    if esc.Status != types.EscrowStatus_ESCROW_STATUS_PENDING {
+    // Consumer chain check must match the escrow record
+    if msg.ConsumerChainId == "" || msg.ConsumerChainId != esc.ConsumerChainId {
         return nil, sdkerrors.ErrUnauthorized
+    }
+
+    // Authorization: if an ICA address is registered for this consumer, require it.
+    // Otherwise, temporarily allow the escrow recipient to mark as claimed.
+    if ica, found := k.GetAuthorizedICA(ctx, msg.ConsumerChainId); found {
+        if msg.Sender != ica {
+            return nil, sdkerrors.ErrUnauthorized
+        }
+    } else {
+        if msg.Sender != esc.Recipient {
+            return nil, sdkerrors.ErrUnauthorized
+        }
+    }
+
+    // Idempotent: already claimed -> OK
+    if esc.Status == types.EscrowStatus_ESCROW_STATUS_CLAIMED {
+        return &types.MsgMarkEscrowClaimedResponse{}, nil
+    }
+    if esc.Status != types.EscrowStatus_ESCROW_STATUS_PENDING {
+        return nil, sdkerrors.ErrInvalidRequest
     }
 
     // Optional: basic authorization check could be added here.
     // For now, just mark as claimed.
     esc.Status = types.EscrowStatus_ESCROW_STATUS_CLAIMED
     k.SetEscrow(ctx, esc)
+
+    // Emit event for observability
+    ctx.EventManager().EmitEvents(sdk.Events{
+        sdk.NewEvent(
+            "mintburn_mark_escrow_claimed",
+            sdk.NewAttribute("escrow_id", esc.EscrowId),
+            sdk.NewAttribute("consumer_chain_id", esc.ConsumerChainId),
+            sdk.NewAttribute("denom", esc.Amount.Denom),
+        ),
+    })
 
     return &types.MsgMarkEscrowClaimedResponse{}, nil
 }

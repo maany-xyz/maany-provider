@@ -55,5 +55,8 @@ func (m *MsgMarkEscrowClaimed) ValidateBasic() error {
     if strings.TrimSpace(m.EscrowId) == "" {
         return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "escrow_id is required")
     }
+    if strings.TrimSpace(m.ConsumerChainId) == "" {
+        return errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "consumer_chain_id is required")
+    }
     return nil
 }

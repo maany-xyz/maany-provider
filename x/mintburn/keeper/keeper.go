@@ -72,8 +72,8 @@ func (k Keeper) SendFromEscrowToAccount(ctx sdk.Context, escrow sdk.AccAddress, 
 }
 
 func (k Keeper) IsAllowedChannel(ctx sdk.Context, channelID string) bool {
-	ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-channel/"))
-	return ps.Has([]byte(channelID))
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-channel/"))
+    return ps.Has([]byte(channelID))
 }
 
 // =========================
@@ -150,4 +150,19 @@ func (k Keeper) GetEscrowByID(ctx sdk.Context, escrowID string) (mintburntypes.E
         e.EscrowId = escrowID
     }
     return e, true
+}
+
+// Authorized ICA mapping helpers
+func (k Keeper) SetAuthorizedICA(ctx sdk.Context, consumerChainID, icaBech32 string) {
+    store := ctx.KVStore(k.StoreKey)
+    store.Set(mintburntypes.AuthorizedICAKey(consumerChainID), []byte(icaBech32))
+}
+
+func (k Keeper) GetAuthorizedICA(ctx sdk.Context, consumerChainID string) (string, bool) {
+    store := ctx.KVStore(k.StoreKey)
+    bz := store.Get(mintburntypes.AuthorizedICAKey(consumerChainID))
+    if bz == nil {
+        return "", false
+    }
+    return string(bz), true
 }

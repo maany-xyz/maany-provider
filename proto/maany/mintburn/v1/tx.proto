@@ -39,5 +39,6 @@ message MsgMarkEscrowClaimed {
   option (cosmos.msg.v1.signer) = "sender";
   string sender = 1;
   string escrow_id = 2;
+  string consumer_chain_id = 3; // used for authorization check against ICA mapping
 }
 message MsgMarkEscrowClaimedResponse {}
