@@ -25,7 +25,7 @@ jobs:
               with:
                 ref: ${{ steps.get-metadata.outputs.ref_name }}
             - name: Setup go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@v6
             - name: Prepare matrix
               id: generate-matrix
               run: |
@@ -49,7 +49,7 @@ jobs:
               with:
                 ref: ${{ needs.prepare-matrix.outputs.ref_name }}
             - name: Setup go
-              uses: actions/setup-go@v5
+              uses: actions/setup-go@v6
             - name: Run test
               env:
                 TEST_DOCKER_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
