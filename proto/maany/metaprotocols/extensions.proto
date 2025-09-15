@@ -1,5 +1,5 @@
 syntax = "proto3";
-package gaia.metaprotocols;
+package maany.metaprotocols;
 
 option go_package = "github.com/maany-xyz/maany-provider/x/metaprotocols/types";
 

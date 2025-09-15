@@ -3,7 +3,10 @@ package maany.mintburn.v1;
 
 import "google/api/annotations.proto";
 import "gogoproto/gogo.proto";
-import "maany/mintburn/v1/escrow.proto"; 
+import "maany/mintburn/v1/escrow.proto";
+
+// ibc-go proofs
+import "ibc/core/commitment/v1/commitment.proto"; // for MerkleProof
 
 option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
 
@@ -14,32 +17,49 @@ service Query {
   rpc Escrows(QueryEscrowsRequest) returns (QueryEscrowsResponse) {
     option (google.api.http).get = "/maany/mintburn/v1/escrows";
   }
-  // Helper to export ICS-23 proof bundle (height provided by caller)
+
+  // Export ICS-23 proof bundle for a specific escrow at a specific height
   rpc EscrowProof(QueryEscrowProofRequest) returns (QueryEscrowProofResponse) {
-    option (google.api.http).get = "/maany/mintburn/v1/escrow_proof/{consumer_chain_id}/{denom}";
+    option (google.api.http).get = "/maany/mintburn/v1/escrow_proof/{consumer_chain_id}/{denom}/{height}";
   }
 }
 
 message QueryEscrowRequest {
   string consumer_chain_id = 1;
-  string denom = 2;
+  string denom = 2; // provider denom (e.g., umaany)
 }
 message QueryEscrowResponse { Escrow escrow = 1; }
 
-message QueryEscrowsRequest { string status_filter = 1; } // "PENDING"|"CLAIMED"|...
+message QueryEscrowsRequest {
+  string status_filter = 1; // optional: "PENDING"|"CLAIMED"|...
+}
 message QueryEscrowsResponse { repeated Escrow escrows = 1; }
 
+// Caller chooses a provider block height that is <= the consumer's trusted client height.
 message QueryEscrowProofRequest {
   string consumer_chain_id = 1;
   string denom = 2;
-  uint64 height = 3; // provider block height to prove
+  uint64 height = 3; // provider block height to prove membership at
 }
+
+// This shape matches what a consumer module wants for ibc-go VerifyMembership():
 message QueryEscrowProofResponse {
+  // The height used to produce the commitment proof.
   uint64 height = 1;
-  bytes  key_path = 2;   // exact KV key
-  bytes  value = 3;      // protobuf-encoded Escrow (deterministic bytes)
-  bytes  proof_ops = 4;  // ICS-23 ProofOps
-  // Optional convenience: signed header & validator set for one-shot LC
-  bytes  tendermint_signed_header = 5;
-  bytes  tendermint_validator_set = 6;
+
+  // The exact committed VALUE bytes under the escrow key (proto-encoded Escrow).
+  bytes  value = 2;
+
+  // The Merkle proof (ibc-go commitment MerkleProof, not raw Tendermint proof ops).
+  ibc.core.commitment.v1.MerkleProof merkle_proof = 3;
+
+  // Full MerklePath segments expected by VerifyMembership (multi-store → sub-store → key).
+  // Ex: ["mintburn", "<hex-escrow-key>"] if you verify against the substore root,
+  // or include multistore segment(s) depending on your commitment scheme.
+  repeated string key_path = 4;
+
+  // Convenience echoes (not used in verification; helpful for UIs/tools):
+  string escrow_id = 5;
+  string amount_denom = 6;
+  string amount_value = 7;
 }

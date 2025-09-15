@@ -8,16 +8,19 @@ option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
 
 enum EscrowStatus {
   ESCROW_STATUS_UNSPECIFIED = 0;
-  ESCROW_STATUS_PENDING     = 1; // locked, not yet claimed by consumer
-  ESCROW_STATUS_CLAIMED     = 2; // consumer minted; still locked as backing
-  ESCROW_STATUS_CANCELED    = 3; // returned to sender
+  ESCROW_STATUS_PENDING     = 1;
+  ESCROW_STATUS_CLAIMED     = 2;
+  ESCROW_STATUS_CANCELED    = 3;
 }
 
 message Escrow {
-  string consumer_chain_id = 1;
+  // NEW: unique, deterministic identifier (part of the store key too).
+  string escrow_id            = 7;
+
+  string consumer_chain_id    = 1;
   cosmos.base.v1beta1.Coin amount = 2 [(gogoproto.nullable) = false];
-  string recipient = 3;                 // optional; empty -> operator’s addr later distributes
-  uint64 expiry_height = 4;             // 0 = no expiry
-  uint64 expiry_time_unix = 5;          // 0 = no expiry
-  EscrowStatus status = 6;
+  string recipient            = 3;     // optional
+  uint64 expiry_height        = 4;     // 0 = none
+  uint64 expiry_time_unix     = 5;     // 0 = none
+  EscrowStatus status         = 6;
 }

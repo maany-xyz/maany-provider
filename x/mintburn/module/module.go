@@ -14,8 +14,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	cli "github.com/maany-xyz/maany-provider/x/mintburn/client/cli"
 	keeper "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
 	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -23,6 +25,9 @@ var (
 	_ module.AppModuleBasic = (*AppModuleBasic)(nil)
 	_ module.HasABCIGenesis = (*AppModule)(nil)
 )
+
+func (AppModuleBasic) GetTxCmd() *cobra.Command    { return cli.NewTxCmd() }
+func (AppModuleBasic) GetQueryCmd() *cobra.Command { return nil } 
 
 // -----------------------------
 // AppModuleBasic
@@ -92,34 +97,6 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
         },
       },
     },
-    Tx: &autocliv1.ServiceCommandDescriptor{
-      Service: "maany.mintburn.v1.Msg",
-      RpcCommandOptions: []*autocliv1.RpcCommandOptions{
-        {
-          RpcMethod: "EscrowInitial",
-          Use:       "escrow-initial [consumer-chain-id] [amount] [recipient(optional)]",
-          Short:     "Lock provider base tokens into escrow",
-          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-            {ProtoField: "consumer_chain_id"},
-            {ProtoField: "amount"},
-            {ProtoField: "recipient", Optional: true},
-          },
-          FlagOptions: map[string]*autocliv1.FlagOptions{
-            "expiry_height":    {Name: "expiry-height"},
-            "expiry_time_unix": {Name: "expiry-time-unix"},
-          },
-        },
-        {
-          RpcMethod: "CancelEscrow",
-          Use:       "cancel-escrow [consumer-chain-id] [denom]",
-          Short:     "Cancel a pending escrow and refund",
-          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-            {ProtoField: "consumer_chain_id"},
-            {ProtoField: "denom"},
-          },
-        },
-      },
-    },
   }
 }
 
@@ -142,8 +119,8 @@ func NewAppModule(cdc codec.Codec, k keeper.Keeper, _ log.Logger) AppModule {
 }
 
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	mintburntypes.RegisterMsgServer(cfg.MsgServer(), am.keeper)
-	mintburntypes.RegisterQueryServer(cfg.QueryServer(), am.keeper)
+    mintburntypes.RegisterMsgServer(cfg.MsgServer(), am.keeper)
+    mintburntypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServer(am.keeper))
 }
 
 func (am AppModule) InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate {

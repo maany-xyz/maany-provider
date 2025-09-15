@@ -1,0 +1,84 @@
+{
+  "params": {
+    "providerClientId": "07-tendermint-0",
+    "providerChainId": "maany-local-1",
+    "allowedProviderDenom": "umaany",
+    "mintDenom": "umaany",
+    "genesisTrustedRoot": {
+      "revisionNumber": "0",
+      "revisionHeight": "4",
+      "hash": "4GeZh+5Vgw6dFQtc6kQTP9A/3V/oP8o6+u/tSiYNDT8="
+    },
+    "useGenesisTrustedRoot": true
+  },
+  "mints": [
+    {
+      "merkleProof": {
+        "proofs": [
+          {
+            "exist": {
+              "key": "ATE=",
+              "value": "CghtYWFueWRleBIVCgZ1bWFhbnkSCzEwMDAwMDAwMDAwMAE6ATE=",
+              "leaf": {
+                "hash": "SHA256",
+                "prehashValue": "SHA256",
+                "length": "VAR_PROTO",
+                "prefix": "AAII"
+              },
+              "path": [
+                {
+                  "hash": "SHA256",
+                  "prefix": "AgQIIA==",
+                  "suffix": "IJeCF+WZU6u/qkcP24FXvh5pl/HBYrZGSGI8/4GmW/ol"
+                },
+                {
+                  "hash": "SHA256",
+                  "prefix": "BAYIIPmYfIn4C2DlHIFpKyh32ZiJzgk0s3DNPuX1gUfoUhv6IA=="
+                }
+              ]
+            }
+          },
+          {
+            "exist": {
+              "key": "eC1taW50YnVybg==",
+              "value": "0FuR8EyP8ZbkBkGM72sNo/26fHHKhdQeVT8wSVg8y6Y=",
+              "leaf": {
+                "hash": "SHA256",
+                "prehashValue": "SHA256",
+                "length": "VAR_PROTO",
+                "prefix": "AA=="
+              },
+              "path": [
+                {
+                  "hash": "SHA256",
+                  "prefix": "Abbeu1bAzVeF2eSes2OhiTRSf4yAoNSNg3rkMt6g0ltj"
+                },
+                {
+                  "hash": "SHA256",
+                  "prefix": "AT8rOdkMEW67wl2AmM+Tl5e3KflUVrxctdp+peWM+P4t"
+                },
+                {
+                  "hash": "SHA256",
+                  "prefix": "AUh8mEvdJZ7eV1t49glZBICIPrNJ6AP15ONTKvSarMXL"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "proofHeightRevisionNumber": 0,
+      "proofHeightRevisionHeight": 4,
+      "keyPath": [
+        "x-mintburn",
+        "0131"
+      ],
+      "value": "CghtYWFueWRleBIVCgZ1bWFhbnkSCzEwMDAwMDAwMDAwMAE6ATE=",
+      "providerChainId": "maany-local-1",
+      "amountDenom": "umaany",
+      "amountValue": "10000000000",
+      "escrowId": "1",
+      "recipient": "maany-dex19k2p7rdqvjcm7yq57c6ntgsfna857pq79fgmpt"
+    }
+  ],
+  "claimedEscrowIds": []
+}

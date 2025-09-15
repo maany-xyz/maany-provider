@@ -4,4 +4,6 @@ plugins:
     out: ..
     opt:
       - plugins=grpc,Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types
-      # remove: paths=source_relative
+      # FORCE ibc imports to v8:
+      - Mibc/core/commitment/v1/commitment.proto=github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types
+      - Mibc/core/client/v1/client.proto=github.com/cosmos/ibc-go/v8/modules/core/02-client/types
