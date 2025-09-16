@@ -1,15 +1,15 @@
 package keeper
 
 import (
-    "context"
-    "encoding/binary"
+	"context"
+	"encoding/binary"
 
-    sdk "github.com/cosmos/cosmos-sdk/types"
-    sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-    errorsmod "cosmossdk.io/errors"
+	errorsmod "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-    "github.com/maany-xyz/maany-provider/x/mintburn/types"
-    ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	"github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 // Ensure Keeper satisfies the generated MsgServer.
@@ -160,7 +160,7 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
             sdk.NewAttribute("escrow_id", esc.EscrowId),
             sdk.NewAttribute("consumer_chain_id", esc.ConsumerChainId),
             sdk.NewAttribute("denom", esc.Amount.Denom),
-            sdk.NewAttribute("channel_id", types.MintburnEscrowChannelID),
+            sdk.NewAttribute("channel_id", mintburnEscrowID),
             sdk.NewAttribute("moved_to_escrow", esc.Amount.String()),
         ),
     })
