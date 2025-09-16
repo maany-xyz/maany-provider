@@ -76,6 +76,69 @@ func (k Keeper) IsAllowedChannel(ctx sdk.Context, channelID string) bool {
     return ps.Has([]byte(channelID))
 }
 
+// Maintain a mapping from consumer chain-id -> set of allowed transfer channel IDs
+func (k Keeper) AddAllowedChannelForChain(ctx sdk.Context, chainID, channelID string) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-channel-by-chain/"))
+    // key layout: "allowed-channel-by-chain/" + chainID + "/" + channelID
+    key := append([]byte(chainID), '/')
+    key = append(key, []byte(channelID)...)
+    ps.Set(key, []byte{1})
+}
+
+func (k Keeper) RemoveAllowedChannelForChain(ctx sdk.Context, chainID, channelID string) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-channel-by-chain/"))
+    key := append([]byte(chainID), '/')
+    key = append(key, []byte(channelID)...)
+    ps.Delete(key)
+}
+
+// GetAnyAllowedChannelForChain returns one allowed channel for a consumer chain-id if present
+func (k Keeper) GetAnyAllowedChannelForChain(ctx sdk.Context, chainID string) (string, bool) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-channel-by-chain/"))
+    // iterate keys starting with chainID + "/"
+    pfx := append([]byte(chainID), '/')
+    it := ps.Iterator(pfx, nil)
+    defer it.Close()
+    if it.Valid() {
+        // extract channelID from key suffix
+        key := it.Key()
+        // key format: chainID + '/' + channelID
+        // find last '/'
+        lastSlash := -1
+        for i := len(key) - 1; i >= 0; i-- {
+            if key[i] == '/' {
+                lastSlash = i
+                break
+            }
+        }
+        if lastSlash >= 0 && lastSlash+1 < len(key) {
+            return string(key[lastSlash+1:]), true
+        }
+    }
+    return "", false
+}
+
+// (canonical channel helpers intentionally omitted; multiple channels allowed for now)
+
+// Allowed consumer chain-id helpers
+func (k Keeper) SetAllowedConsumerChain(ctx sdk.Context, chainID string, allowed bool) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-chain/"))
+    key := []byte(chainID)
+    if allowed {
+        ps.Set(key, []byte{1})
+    } else {
+        ps.Delete(key)
+    }
+}
+
+func (k Keeper) IsAllowedConsumerChain(ctx sdk.Context, chainID string) bool {
+    if chainID == "" {
+        return false
+    }
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-chain/"))
+    return ps.Has([]byte(chainID))
+}
+
 // =========================
 // Escrow storage helpers
 // Primary:    EscrowPrefix + escrow_id -> Escrow (value)

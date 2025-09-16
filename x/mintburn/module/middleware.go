@@ -1,8 +1,8 @@
 package mintburn
 
 import (
-	"encoding/json"
-	"fmt"
+    "encoding/json"
+    "fmt"
 
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
@@ -14,7 +14,8 @@ import (
 
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctmtypes "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
-	mintburn "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
+    mintburn "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
+    mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 type IBCMiddleware struct {
@@ -86,19 +87,29 @@ func (im IBCMiddleware) HandleChannelIdStorage(
 	if !ok {
 		return fmt.Errorf("unexpected client state type")
 	}
-	if tmClientState.ChainId == "maanydex" {
-
-		if isOpening {
-			store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
-			store.Set([]byte(channelID), []byte{1})
-			ctx.Logger().Info("Successfully set channel-id", "ID", channelID)
-		} else {
-			store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
-			store.Delete([]byte(channelID))
-			ctx.Logger().Info("Channel deleted in OnChanCloseConfirm", "ID", channelID)
-		}
-		
-	}
+    // Chain-id allowlist: only allow channels for explicitly allowed chain-ids.
+    // For now, also allow hardcoded "maanydex" until params/genesis wiring exists.
+    counterpartyChainID := tmClientState.ChainId
+    allowedChain := (counterpartyChainID == "maanydex") || im.keeper.IsAllowedConsumerChain(ctx, counterpartyChainID)
+    if !allowedChain {
+        ctx.Logger().Info("mintburn: ignoring transfer channel; counterparty chain-id not allow-listed",
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
+        return nil
+    }
+    if isOpening {
+        store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
+        store.Set([]byte(channelID), []byte{1})
+        // also track mapping chain-id -> channel for later escrow funding
+        im.keeper.AddAllowedChannelForChain(ctx, counterpartyChainID, channelID)
+        ctx.Logger().Info("mintburn: allow-listed transfer channel",
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
+    } else {
+        store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
+        store.Delete([]byte(channelID))
+        im.keeper.RemoveAllowedChannelForChain(ctx, counterpartyChainID, channelID)
+        ctx.Logger().Info("mintburn: removed transfer channel from allow-list",
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
+    }
 
 	return nil
 }
@@ -183,38 +194,77 @@ func (im IBCMiddleware) OnRecvPacket(
 
     var data ibctransfertypes.FungibleTokenPacketData
     if err := json.Unmarshal(packet.GetData(), &data); err != nil {
+        ctx.Logger().Error("mintburn: invalid packet data", "err", err)
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("invalid packet data"))
     }
 
-    // Only handle our allow-listed transfer channel
-    if packet.SourcePort != "transfer" || !im.keeper.IsAllowedChannel(ctx, packet.SourceChannel) {
+    // Log any incoming transfer packet on recv path (consumer -> provider)
+    ctx.Logger().Info("mintburn: recv transfer packet",
+        "src_port", packet.SourcePort, "src_channel", packet.SourceChannel,
+        "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel,
+        "sender", data.Sender, "receiver", data.Receiver,
+        "denom", data.Denom, "amount", data.Amount,
+    )
+
+    // Only handle our allow-listed transfer channel (use local identifiers on recv)
+    if packet.DestinationPort != "transfer" || !im.keeper.IsAllowedChannel(ctx, packet.DestinationChannel) {
+        ctx.Logger().Info("mintburn: skip recv — not allow-listed or not transfer port",
+            "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel)
         return im.app.OnRecvPacket(ctx, packet, relayer)
     }
 
-    // Resolve base denom and verify it matches your provider base (e.g., "umaany")
+    // Resolve base denom and verify it matches your provider base (e.g., "umaany").
+    // ReceiverChainIsSource must use local (destination) identifiers on recv.
     baseDenom := data.Denom
-    if !ibctransfertypes.ReceiverChainIsSource(packet.GetSourcePort(), packet.GetSourceChannel(), data.Denom) {
+    if !ibctransfertypes.ReceiverChainIsSource(packet.DestinationPort, packet.DestinationChannel, data.Denom) {
         trace := ibctransfertypes.ParseDenomTrace(data.Denom)
         baseDenom = trace.BaseDenom
     }
+    ctx.Logger().Info("mintburn: resolved base denom", "base_denom", baseDenom)
     if baseDenom != "umaany" { // or "stake" depending on your mainnet minimal denom
         // Not our path -> let transfer app mint a voucher
+        ctx.Logger().Info("mintburn: skip recv — base denom not provider base", "base_denom", baseDenom)
         return im.app.OnRecvPacket(ctx, packet, relayer)
     }
 
     // Validate receiver and amount
     rcpt, err := sdk.AccAddressFromBech32(data.Receiver)
     if err != nil {
+        ctx.Logger().Error("mintburn: invalid receiver", "receiver", data.Receiver, "err", err)
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("invalid receiver"))
     }
     amt, ok := sdkmath.NewIntFromString(data.Amount)
     if !ok || !amt.IsPositive() {
+        ctx.Logger().Error("mintburn: invalid amount", "amount", data.Amount)
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("invalid amount"))
     }
 
-    // RELEASE from the Provider escrow to the recipient (no voucher mint!)
-    escrowAddr := ibctransfertypes.GetEscrowAddress(packet.DestinationPort, packet.DestinationChannel)
+    // RELEASE from the Provider escrow to the recipient (no voucher mint!) — use the dedicated mintburn escrow address
+    // Derive the consumer chain-id from the local channel/connection/client.
+    ch, found := im.keeper.ChannelKeeper.GetChannel(ctx, packet.DestinationPort, packet.DestinationChannel)
+    if !found || len(ch.ConnectionHops) == 0 {
+        ctx.Logger().Error("mintburn: recv on unknown channel", "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel)
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown channel"))
+    }
+    conn, found := im.keeper.ConnectionKeeper.GetConnection(ctx, ch.ConnectionHops[0])
+    if !found {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown connection"))
+    }
+    cstate, found := im.keeper.ClientKeeper.GetClientState(ctx, conn.Counterparty.ClientId)
+    if !found {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown client state"))
+    }
+    tm, ok := cstate.(*ibctmtypes.ClientState)
+    if !ok {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unexpected client state type"))
+    }
+
+    mintburnEscrowID := mintburntypes.MintburnEscrowChannelIDFor(tm.ChainId)
+    escrowAddr := ibctransfertypes.GetEscrowAddress("transfer", mintburnEscrowID)
     coin := sdk.NewCoin("umaany", amt)
+
+    ctx.Logger().Info("mintburn: releasing from escrow",
+        "amount", coin.String(), "to", rcpt.String(), "escrow", escrowAddr.String())
 
     if err := im.keeper.SendFromEscrowToAccount(ctx, escrowAddr, rcpt, coin); err != nil {
         ctx.Logger().Error("mintburn: release from escrow failed", "err", err)

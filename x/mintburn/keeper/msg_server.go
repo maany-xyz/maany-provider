@@ -1,13 +1,15 @@
 package keeper
 
 import (
-	"context"
-	"encoding/binary"
+    "context"
+    "encoding/binary"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+    errorsmod "cosmossdk.io/errors"
 
-	"github.com/maany-xyz/maany-provider/x/mintburn/types"
+    "github.com/maany-xyz/maany-provider/x/mintburn/types"
+    ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 )
 
 // Ensure Keeper satisfies the generated MsgServer.
@@ -122,8 +124,32 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
         return nil, sdkerrors.ErrInvalidRequest
     }
 
-    // Optional: basic authorization check could be added here.
-    // For now, just mark as claimed.
+    // Ensure at least one allowed transfer channel exists for this consumer chain-id
+    if _, ok := k.GetAnyAllowedChannelForChain(ctx, esc.ConsumerChainId); !ok {
+        return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "no allowed transfer channel for chain-id %s", esc.ConsumerChainId)
+    }
+
+    // Move funds from mintburn module account to the dedicated mintburn escrow address
+    mintburnEscrowID := types.MintburnEscrowChannelIDFor(esc.ConsumerChainId)
+    escrowAddr := ibctransfertypes.GetEscrowAddress("transfer", mintburnEscrowID)
+    modAddr := k.accountKeeper.GetModuleAddress(types.ModuleName)
+    amt := sdk.NewCoins(esc.Amount)
+
+    // Log before transfer
+    ctx.Logger().Info("mintburn: funding transfer escrow from module",
+        "escrow_id", esc.EscrowId,
+        "consumer_chain_id", esc.ConsumerChainId,
+        "channel_id", mintburnEscrowID,
+        "amount", esc.Amount.String(),
+        "from", modAddr.String(),
+        "to", escrowAddr.String(),
+    )
+
+    if err := k.bankKeeper.SendCoins(ctx, modAddr, escrowAddr, amt); err != nil {
+        return nil, err
+    }
+
+    // Mark as claimed after successful movement
     esc.Status = types.EscrowStatus_ESCROW_STATUS_CLAIMED
     k.SetEscrow(ctx, esc)
 
@@ -134,6 +160,8 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
             sdk.NewAttribute("escrow_id", esc.EscrowId),
             sdk.NewAttribute("consumer_chain_id", esc.ConsumerChainId),
             sdk.NewAttribute("denom", esc.Amount.Denom),
+            sdk.NewAttribute("channel_id", types.MintburnEscrowChannelID),
+            sdk.NewAttribute("moved_to_escrow", esc.Amount.String()),
         ),
     })
 

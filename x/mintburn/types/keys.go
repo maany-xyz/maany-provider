@@ -26,6 +26,13 @@ var EscrowIndexPrefix = []byte{0x02}
 // Authorized ICA address per consumer chain: consumer_chain_id -> bech32 addr bytes
 var AuthorizedICAPrefix = []byte{0x03}
 
+// MintburnEscrowChannelIDFor derives a synthetic "channel id" string used to
+// compute a dedicated ICS-20 escrow address per consumer chain-id.
+// It does not need to correspond to a real IBC channel.
+func MintburnEscrowChannelIDFor(consumerChainID string) string {
+    return "mintburn-" + consumerChainID
+}
+
 func EscrowKeyByID(escrowID string) []byte {
 	return append(EscrowPrefix, []byte(escrowID)...)
 }
