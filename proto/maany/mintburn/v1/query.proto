@@ -22,6 +22,11 @@ service Query {
   rpc EscrowProof(QueryEscrowProofRequest) returns (QueryEscrowProofResponse) {
     option (google.api.http).get = "/maany/mintburn/v1/escrow_proof/{consumer_chain_id}/{denom}/{height}";
   }
+
+  // Return the authorized ICA address for a consumer chain, if any
+  rpc AuthorizedICA(QueryAuthorizedICARequest) returns (QueryAuthorizedICAResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/authorized_ica/{consumer_chain_id}";
+  }
 }
 
 message QueryEscrowRequest {
@@ -62,4 +67,13 @@ message QueryEscrowProofResponse {
   string escrow_id = 5;
   string amount_denom = 6;
   string amount_value = 7;
+}
+
+// Authorized ICA mapping query
+message QueryAuthorizedICARequest {
+  string consumer_chain_id = 1;
+}
+message QueryAuthorizedICAResponse {
+  string ica_address = 1; // empty if not found
+  bool   found       = 2;
 }

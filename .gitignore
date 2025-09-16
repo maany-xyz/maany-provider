@@ -58,3 +58,6 @@ contract_tests/*
 go.work.sum
 
 node_modules
+
+# Local binaries
+maanypd

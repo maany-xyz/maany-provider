@@ -7,6 +7,8 @@
 
 3. (Optional) Check the escrow-proof: `maanypd q mintburn escrow-proof maanydex umaany`
 
+- `maanypd q mintburn escrow maanydex umaany`
+
 - Write down:
 - `data-hex`
 - Note:
@@ -19,7 +21,7 @@
       --node http://localhost:26657 \
       --store-key x-mintburn \
       --data-hex 0131 \
-      --height <height_from_above> \
+      --height 5 \
       --provider-chain-id maany-local-1 \
       --provider-client-id 07-tendermint-0 \
       --allowed-provider-denom umaany \

@@ -556,7 +556,9 @@ func NewAppKeeper(
 	transferStack = mintburnmodule.NewIBCMiddleware(transferStack, appKeepers.MintBurnKeeper)
 
 	// Create ICAHost Stack
-	var icaHostStack porttypes.IBCModule = icahost.NewIBCModule(appKeepers.ICAHostKeeper)
+    var icaHostStack porttypes.IBCModule = icahost.NewIBCModule(appKeepers.ICAHostKeeper)
+    // Wrap ICA Host to auto-register authorized ICA addresses for mintburn module
+    icaHostStack = mintburnmodule.NewICAHostMiddleware(icaHostStack, appKeepers.MintBurnKeeper, appKeepers.ICAHostKeeper)
 
 	// Create Interchain Accounts Controller Stack
 	var icaControllerStack porttypes.IBCModule = icacontroller.NewIBCMiddleware(nil, appKeepers.ICAControllerKeeper)

@@ -95,6 +95,14 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
             "height": {Name: "prove-height", Usage: "Provider block height to prove"},
           },
         },
+        {
+          RpcMethod: "AuthorizedICA",
+          Use:       "authorized-ica [consumer-chain-id]",
+          Short:     "Show authorized ICA address for a consumer chain",
+          PositionalArgs: []*autocliv1.PositionalArgDescriptor{
+            {ProtoField: "consumer_chain_id"},
+          },
+        },
       },
     },
   }

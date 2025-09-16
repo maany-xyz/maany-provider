@@ -65,3 +65,16 @@ func (q queryServer) Escrows(ctx context.Context, req *types.QueryEscrowsRequest
 
 	return &types.QueryEscrowsResponse{Escrows: list}, nil
 }
+
+// AuthorizedICA returns the registered ICA address for a consumer chain, if set
+func (q queryServer) AuthorizedICA(ctx context.Context, req *types.QueryAuthorizedICARequest) (*types.QueryAuthorizedICAResponse, error) {
+    if req == nil || req.ConsumerChainId == "" {
+        return nil, status.Error(codes.InvalidArgument, "consumer_chain_id is required")
+    }
+    sdkCtx := sdk.UnwrapSDKContext(ctx)
+    addr, found := q.GetAuthorizedICA(sdkCtx, req.ConsumerChainId)
+    if !found {
+        return &types.QueryAuthorizedICAResponse{IcaAddress: "", Found: false}, nil
+    }
+    return &types.QueryAuthorizedICAResponse{IcaAddress: addr, Found: true}, nil
+}
