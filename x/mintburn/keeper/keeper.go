@@ -1,11 +1,12 @@
 package keeper
 
 import (
-	"cosmossdk.io/log"
-	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+    "cosmossdk.io/log"
+    "cosmossdk.io/store/prefix"
+    storetypes "cosmossdk.io/store/types"
+    "github.com/cosmos/cosmos-sdk/codec"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	connectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
@@ -29,13 +30,14 @@ type ClientKeeper interface {
 
 // ---- Keeper ----
 type Keeper struct {
-	cdc              codec.BinaryCodec
-	ModuleName       string
-	StoreKey         storetypes.StoreKey
-	accountKeeper    mintburntypes.AccountKeeper
-	bankKeeper       mintburntypes.BankKeeper
-	ChannelKeeper    ChannelKeeper
-	ConnectionKeeper ConnectionKeeper
+    cdc              codec.BinaryCodec
+    ModuleName       string
+    StoreKey         storetypes.StoreKey
+    paramSpace       paramstypes.Subspace
+    accountKeeper    mintburntypes.AccountKeeper
+    bankKeeper       mintburntypes.BankKeeper
+    ChannelKeeper    ChannelKeeper
+    ConnectionKeeper ConnectionKeeper
     ClientKeeper     ClientKeeper
     // Optional: CCV provider consumer registry for channel auth
     providerRegistry mintburntypes.ProviderConsumerRegistry
@@ -45,6 +47,7 @@ func NewKeeper(
     cdc codec.BinaryCodec,
     moduleName string,
     storeKey storetypes.StoreKey,
+    paramSpace paramstypes.Subspace,
     accountKeeper mintburntypes.AccountKeeper,
     bankKeeper mintburntypes.BankKeeper,
     channelKeeper ChannelKeeper,
@@ -56,6 +59,7 @@ func NewKeeper(
         cdc:              cdc,
         ModuleName:       moduleName,
         StoreKey:         storeKey,
+        paramSpace:       paramSpace,
         accountKeeper:    accountKeeper,
         bankKeeper:       bankKeeper,
         ChannelKeeper:    channelKeeper,
@@ -73,6 +77,59 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 // ProviderRegistry exposes the optional provider registry
 func (k Keeper) ProviderRegistry() mintburntypes.ProviderConsumerRegistry {
     return k.providerRegistry
+}
+
+// -----------------
+// Params helpers
+// -----------------
+
+func (k Keeper) GetParams(ctx sdk.Context) mintburntypes.Params {
+    // If subspace not present or key not set, return defaults
+    if k.paramSpace.Name() == "" || !k.paramSpace.Has(ctx, mintburntypes.KeyAllowedConsumers) {
+        return mintburntypes.DefaultParams()
+    }
+    var p mintburntypes.Params
+    k.paramSpace.GetParamSet(ctx, &p)
+    if err := p.Validate(); err != nil {
+        return mintburntypes.DefaultParams()
+    }
+    return p
+}
+
+func (k Keeper) IsAllowedConsumerByParams(ctx sdk.Context, chainID string) bool {
+    p := k.GetParams(ctx)
+    for _, id := range p.AllowedConsumers {
+        if id == chainID {
+            return true
+        }
+    }
+    return false
+}
+
+// SetParams sets the module parameters.
+func (k Keeper) SetParams(ctx sdk.Context, p mintburntypes.Params) {
+    if k.paramSpace.Name() == "" {
+        return
+    }
+    k.paramSpace.SetParamSet(ctx, &p)
+}
+
+// InitGenesis sets initial state from genesis
+func (k Keeper) InitGenesis(ctx sdk.Context, gs *mintburntypes.GenesisState) {
+    if gs == nil {
+        gs = &mintburntypes.GenesisState{Params: &mintburntypes.Params{}}
+    }
+    if gs.Params == nil {
+        k.SetParams(ctx, mintburntypes.Params{})
+    } else {
+        k.SetParams(ctx, *gs.Params)
+    }
+}
+
+// ExportGenesis returns the current state as genesis
+func (k Keeper) ExportGenesis(ctx sdk.Context) *mintburntypes.GenesisState {
+    p := k.GetParams(ctx)
+    return &mintburntypes.GenesisState{Params: &p}
 }
 
 // Provider keeper
@@ -129,24 +186,7 @@ func (k Keeper) GetAnyAllowedChannelForChain(ctx sdk.Context, chainID string) (s
 
 // (canonical channel helpers intentionally omitted; multiple channels allowed for now)
 
-// Allowed consumer chain-id helpers
-func (k Keeper) SetAllowedConsumerChain(ctx sdk.Context, chainID string, allowed bool) {
-    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-chain/"))
-    key := []byte(chainID)
-    if allowed {
-        ps.Set(key, []byte{1})
-    } else {
-        ps.Delete(key)
-    }
-}
-
-func (k Keeper) IsAllowedConsumerChain(ctx sdk.Context, chainID string) bool {
-    if chainID == "" {
-        return false
-    }
-    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("allowed-chain/"))
-    return ps.Has([]byte(chainID))
-}
+// (KV allow-list of consumer chain-ids removed; use params + provider registry)
 
 // =========================
 // Escrow storage helpers

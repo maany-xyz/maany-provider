@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package maany.mintburn.v1;
+
+option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
+
+// Params defines the mintburn module parameters.
+message Params {
+  // Full consumer chain-ids authorized for mintburn operations (in addition to
+  // the CCV Provider registry check when available).
+  repeated string allowed_consumers = 1;
+}
+

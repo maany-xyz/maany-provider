@@ -46,12 +46,20 @@ func (AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 	mintburntypes.RegisterInterfaces(reg)
 }
 
-func (AppModuleBasic) DefaultGenesis(codec.JSONCodec) json.RawMessage {
-	return []byte(`{}`)
+func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
+    gs := &mintburntypes.GenesisState{Params: &mintburntypes.Params{}}
+    return cdc.MustMarshalJSON(gs)
 }
 
-func (AppModuleBasic) ValidateGenesis(codec.JSONCodec, client.TxEncodingConfig, json.RawMessage) error {
-	return nil
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
+    if len(bz) == 0 {
+        return nil
+    }
+    var gs mintburntypes.GenesisState
+    if err := cdc.UnmarshalJSON(bz, &gs); err != nil {
+        return err
+    }
+    return gs.Params.Validate()
 }
 
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
@@ -131,12 +139,20 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
     mintburntypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServer(am.keeper))
 }
 
-func (am AppModule) InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate {
-	return nil
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, bz json.RawMessage) []abci.ValidatorUpdate {
+    var gs mintburntypes.GenesisState
+    if len(bz) == 0 {
+        gs = mintburntypes.GenesisState{Params: &mintburntypes.Params{}}
+    } else {
+        cdc.MustUnmarshalJSON(bz, &gs)
+    }
+    am.keeper.InitGenesis(ctx, &gs)
+    return nil
 }
 
-func (am AppModule) ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage {
-	return []byte(`{}`)
+func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
+    gs := am.keeper.ExportGenesis(ctx)
+    return cdc.MustMarshalJSON(gs)
 }
 
 func (am AppModule) ConsensusVersion() uint64 { return 1 }

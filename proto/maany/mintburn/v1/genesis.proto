@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package maany.mintburn.v1;
+
+import "maany/mintburn/v1/params.proto";
+
+option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
+
+// GenesisState defines the mintburn module's genesis state.
+message GenesisState {
+  Params params = 1;
+}
+

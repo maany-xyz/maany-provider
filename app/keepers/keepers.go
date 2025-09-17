@@ -382,6 +382,7 @@ func NewAppKeeper(
         appCodec,
         mintburntypes.ModuleName,
         appKeepers.keys[mintburntypes.StoreKey],
+        appKeepers.GetSubspace(mintburntypes.ModuleName),
         appKeepers.AccountKeeper,
         appKeepers.BankKeeper,
         appKeepers.IBCKeeper.ChannelKeeper,
@@ -613,7 +614,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ratelimittypes.ModuleName).WithKeyTable(ratelimittypes.ParamKeyTable())
 	paramsKeeper.Subspace(providertypes.ModuleName).WithKeyTable(providertypes.ParamKeyTable())
 	paramsKeeper.Subspace(wasmtypes.ModuleName)
-	paramsKeeper.Subspace(blockrewardsmoduletypes.ModuleName)
+    paramsKeeper.Subspace(blockrewardsmoduletypes.ModuleName)
+    paramsKeeper.Subspace(mintburntypes.ModuleName).WithKeyTable(mintburntypes.ParamKeyTable())
 
 
 	return paramsKeeper

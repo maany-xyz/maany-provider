@@ -88,17 +88,17 @@ func (im IBCMiddleware) HandleChannelIdStorage(
     if !ok {
         return fmt.Errorf("unexpected client state type")
     }
-    // Chain-id allowlist: only allow channels for explicitly allowed chain-ids.
-    // For now, also allow hardcoded "maanydex" until params/genesis wiring exists.
+    // Chain-id allowlist: only allow channels for explicitly allowed chain-ids (via params)
     counterpartyChainID := tmClientState.ChainId
     // First, consult provider registry if available: require that local client
     // tracks the specific registered consumer chain-id. If provider registry is
-    // not wired, fall back to allow-list by chain-id for now.
+    // not wired, fall back to allow-list by params.
     regOK := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientID, counterpartyChainID)
-    allowedChain := regOK || (counterpartyChainID == "maanydex") || im.keeper.IsAllowedConsumerChain(ctx, counterpartyChainID)
+    allowedByParams := im.keeper.IsAllowedConsumerByParams(ctx, counterpartyChainID)
+    allowedChain := regOK || allowedByParams
     if !allowedChain {
-        ctx.Logger().Info("mintburn: ignoring transfer channel; counterparty chain-id not allow-listed",
-            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID, "provider_reg_ok", regOK)
+        ctx.Logger().Info("mintburn: ignoring transfer channel; not authorized by provider registry or params",
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID, "provider_reg_ok", regOK, "params_ok", allowedByParams)
         return nil
     }
     if isOpening {
