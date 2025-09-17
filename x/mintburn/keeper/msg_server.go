@@ -104,16 +104,15 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
         return nil, sdkerrors.ErrUnauthorized
     }
 
-    // Authorization: if an ICA address is registered for this consumer, require it.
-    // Otherwise, temporarily allow the escrow recipient to mark as claimed.
-    if ica, found := k.GetAuthorizedICA(ctx, msg.ConsumerChainId); found {
-        if msg.Sender != ica {
-            return nil, sdkerrors.ErrUnauthorized
-        }
-    } else {
-        if msg.Sender != esc.Recipient {
-            return nil, sdkerrors.ErrUnauthorized
-        }
+    // Authorization: strictly require the authorized ICA address for this consumer.
+    if ica, found := k.GetAuthorizedICA(ctx, msg.ConsumerChainId); !found {
+        ctx.Logger().Error("mintburn: CLAIMED rejected — no authorized ICA registered",
+            "consumer_chain_id", msg.ConsumerChainId, "sender", msg.Sender)
+        return nil, sdkerrors.ErrUnauthorized
+    } else if msg.Sender != ica {
+        ctx.Logger().Error("mintburn: CLAIMED rejected — sender is not authorized ICA",
+            "consumer_chain_id", msg.ConsumerChainId, "sender", msg.Sender, "expected_ica", ica)
+        return nil, sdkerrors.ErrUnauthorized
     }
 
     // Idempotent: already claimed -> OK
