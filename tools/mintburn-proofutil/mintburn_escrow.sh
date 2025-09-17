@@ -43,7 +43,7 @@ RECIPIENT="maany-dex1c7j33khjnqf2s44t2aykshthjkpf50sfxzu7af"
 # NEW: ICA params (adjust as needed)
 ICA_CONTROLLER_CONNECTION_ID="connection-0"
 ICA_OWNER="mintburn-claims"
-ICA_TX_TIMEOUT_SECONDS="300"
+ICA_TX_TIMEOUT_SECONDS="150"
 ICA_MAX_CLAIM_PER_BLOCK="10"
 
 echo "Submitting escrow-initial tx..."

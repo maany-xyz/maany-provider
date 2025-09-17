@@ -6,8 +6,8 @@ option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
 
 // Params defines the mintburn module parameters.
 message Params {
-  // Deprecated: full consumer chain-ids. Retained for backward compatibility,
-  // but not used when registry-only gating is enabled.
+  // Full consumer chain-ids that are mintburn-enabled. Mintburn will only
+  // intercept for consumers that are both CCV-registered and listed here.
   repeated string allowed_consumers = 1;
 
   // If true, unauthorized transfer channel handshakes are rejected (handshake errors).

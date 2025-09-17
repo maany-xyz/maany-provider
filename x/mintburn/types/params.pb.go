@@ -24,8 +24,8 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // Params defines the mintburn module parameters.
 type Params struct {
-	// Deprecated: full consumer chain-ids. Retained for backward compatibility,
-	// but not used when registry-only gating is enabled.
+	// Full consumer chain-ids that are mintburn-enabled. Mintburn will only
+	// intercept for consumers that are both CCV-registered and listed here.
 	AllowedConsumers []string `protobuf:"bytes,1,rep,name=allowed_consumers,json=allowedConsumers,proto3" json:"allowed_consumers,omitempty"`
 	// If true, unauthorized transfer channel handshakes are rejected (handshake errors).
 	RejectUnauthorizedChannels bool `protobuf:"varint,2,opt,name=reject_unauthorized_channels,json=rejectUnauthorizedChannels,proto3" json:"reject_unauthorized_channels,omitempty"`

@@ -11,7 +11,7 @@ This document explains how to configure and operate the mintburn module with CCV
 
 ## Configure via genesis.json
 
-Add allowed consumer chain‑ids under `app_state.mintburn.params.allowed_consumers`.
+Add mintburn‑enabled consumer chain‑ids under `app_state.mintburn.params.allowed_consumers`. Mintburn will intercept only for consumers that are both CCV‑registered and listed here. All other consumers use normal ICS‑20 voucher logic.
 
 Example:
 
@@ -20,7 +20,10 @@ Example:
   "app_state": {
     "mintburn": {
       "params": {
-        "allowed_consumers": ["maanydex-1"]
+        "allowed_consumers": ["maanydex-1"],
+        "reject_unauthorized_channels": true,
+        "allowed_client_ids": [],
+        "allowed_connection_ids": []
       }
     }
   }
@@ -136,7 +139,7 @@ Security/Authorization
 
 - Handshake hard‑fail mode: add a param to reject unauthorized transfer channel
   handshakes (return error) instead of silently ignoring in mintburn. Useful to prevent
-  stray channels.
+  stray channels. -> IMPLEMENTED
 - Provider registry check depth: optionally verify the transfer connection matches the
   CCV connection for that consumer (same local client/connection), not just “clientID
   belongs to consumer”.
@@ -257,3 +260,5 @@ Risk profile
   - attempt to open a transfer channel before CCV registry is ready:
   - With reject_unauthorized_channels = true, handshake should error. - After CCV registry shows the consumer’s client mapping, handshake should
     succeed.
+
+`maanypd tx ibc-transfer transfer transfer channel-2 maany-dex19k2p7rdqvjcm7yq57c6ntgsfna857pq79fgmpt 50000000umaany --from val --gas auto --gas-adjustment 1.6 --fees 190000umaany --keyring-backend test --chain-id maany-local-1 -y`

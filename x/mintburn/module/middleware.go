@@ -92,6 +92,9 @@ func (im IBCMiddleware) HandleChannelIdStorage(
     counterpartyChainID := tmClientState.ChainId
     params := im.keeper.GetParams(ctx)
     regOK := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientID, counterpartyChainID)
+    // mintburn-enabled only for explicitly allowed consumers
+    allowedByConsumer := false
+    for _, cid := range params.AllowedConsumers { if cid == counterpartyChainID { allowedByConsumer = true; break } }
     // optional backdoors
     allowedByClient := false
     for _, cid := range params.AllowedClientIds {
@@ -101,14 +104,14 @@ func (im IBCMiddleware) HandleChannelIdStorage(
     for _, conn := range params.AllowedConnectionIds {
         if conn == connectionID { allowedByConn = true; break }
     }
-    authorized := regOK || allowedByClient || allowedByConn
+    authorized := (regOK && allowedByConsumer) || allowedByClient || allowedByConn
     if !authorized {
         if params.RejectUnauthorizedChannels {
             return fmt.Errorf("mintburn: unauthorized transfer channel (chain-id=%s client-id=%s connection-id=%s)", counterpartyChainID, localClientID, connectionID)
         }
         ctx.Logger().Info("mintburn: ignoring transfer channel; not authorized",
             "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID,
-            "provider_reg_ok", regOK, "allowed_client", allowedByClient, "allowed_connection", allowedByConn)
+            "provider_reg_ok", regOK, "allowed_consumer", allowedByConsumer, "allowed_client", allowedByClient, "allowed_connection", allowedByConn)
         return nil
     }
     if isOpening {
@@ -250,14 +253,16 @@ func (im IBCMiddleware) OnRecvPacket(
     }
     paramsAuth := im.keeper.GetParams(ctx)
     regOKAuth := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientIDAuth, tmAuth.ChainId)
+    allowedByConsumerAuth := false
+    for _, c := range paramsAuth.AllowedConsumers { if c == tmAuth.ChainId { allowedByConsumerAuth = true; break } }
     allowedByClientAuth := false
     for _, cid := range paramsAuth.AllowedClientIds { if cid == localClientIDAuth { allowedByClientAuth = true; break } }
     allowedByConnAuth := false
     for _, cID := range paramsAuth.AllowedConnectionIds { if cID == connIDAuth { allowedByConnAuth = true; break } }
-    if !(regOKAuth || allowedByClientAuth || allowedByConnAuth) {
+    if !((regOKAuth && allowedByConsumerAuth) || allowedByClientAuth || allowedByConnAuth) {
         ctx.Logger().Error("mintburn: recv unauthorized — not authorized by provider registry or params",
             "dst_channel", packet.DestinationChannel, "local_client_id", localClientIDAuth, "connection_id", connIDAuth,
-            "counterparty_chain_id", tmAuth.ChainId, "provider_reg_ok", regOKAuth, "allowed_client", allowedByClientAuth, "allowed_connection", allowedByConnAuth)
+            "counterparty_chain_id", tmAuth.ChainId, "provider_reg_ok", regOKAuth, "allowed_consumer", allowedByConsumerAuth, "allowed_client", allowedByClientAuth, "allowed_connection", allowedByConnAuth)
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unauthorized channel"))
     }
 
