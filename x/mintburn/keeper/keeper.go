@@ -36,34 +36,43 @@ type Keeper struct {
 	bankKeeper       mintburntypes.BankKeeper
 	ChannelKeeper    ChannelKeeper
 	ConnectionKeeper ConnectionKeeper
-	ClientKeeper     ClientKeeper
+    ClientKeeper     ClientKeeper
+    // Optional: CCV provider consumer registry for channel auth
+    providerRegistry mintburntypes.ProviderConsumerRegistry
 }
 
 func NewKeeper(
-	cdc codec.BinaryCodec,
-	moduleName string,
-	storeKey storetypes.StoreKey,
-	accountKeeper mintburntypes.AccountKeeper,
-	bankKeeper mintburntypes.BankKeeper,
-	channelKeeper ChannelKeeper,
-	connectionKeeper ConnectionKeeper,
-	clientKeeper ClientKeeper,
+    cdc codec.BinaryCodec,
+    moduleName string,
+    storeKey storetypes.StoreKey,
+    accountKeeper mintburntypes.AccountKeeper,
+    bankKeeper mintburntypes.BankKeeper,
+    channelKeeper ChannelKeeper,
+    connectionKeeper ConnectionKeeper,
+    clientKeeper ClientKeeper,
+    providerRegistry mintburntypes.ProviderConsumerRegistry,
 ) Keeper {
-	return Keeper{
-		cdc:              cdc,
-		ModuleName:       moduleName,
-		StoreKey:         storeKey,
-		accountKeeper:    accountKeeper,
-		bankKeeper:       bankKeeper,
-		ChannelKeeper:    channelKeeper,
-		ConnectionKeeper: connectionKeeper,
-		ClientKeeper:     clientKeeper,
-	}
+    return Keeper{
+        cdc:              cdc,
+        ModuleName:       moduleName,
+        StoreKey:         storeKey,
+        accountKeeper:    accountKeeper,
+        bankKeeper:       bankKeeper,
+        ChannelKeeper:    channelKeeper,
+        ConnectionKeeper: connectionKeeper,
+        ClientKeeper:     clientKeeper,
+        providerRegistry: providerRegistry,
+    }
 }
 
 // Logger returns a module-specific logger.
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", "x/"+k.ModuleName)
+    return ctx.Logger().With("module", "x/"+k.ModuleName)
+}
+
+// ProviderRegistry exposes the optional provider registry
+func (k Keeper) ProviderRegistry() mintburntypes.ProviderConsumerRegistry {
+    return k.providerRegistry
 }
 
 // Provider keeper

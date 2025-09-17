@@ -378,16 +378,17 @@ func NewAppKeeper(
 
 	appKeepers.ProviderModule = icsprovider.NewAppModule(&appKeepers.ProviderKeeper, appKeepers.GetSubspace(providertypes.ModuleName))
 
-	appKeepers.MintBurnKeeper = mintburn.NewKeeper(
-		appCodec,
-		mintburntypes.ModuleName,
-		appKeepers.keys[mintburntypes.StoreKey],
-		appKeepers.AccountKeeper,
-		appKeepers.BankKeeper,
-		appKeepers.IBCKeeper.ChannelKeeper,
-		appKeepers.IBCKeeper.ConnectionKeeper, 
-		appKeepers.IBCKeeper.ClientKeeper,
-	)
+    appKeepers.MintBurnKeeper = mintburn.NewKeeper(
+        appCodec,
+        mintburntypes.ModuleName,
+        appKeepers.keys[mintburntypes.StoreKey],
+        appKeepers.AccountKeeper,
+        appKeepers.BankKeeper,
+        appKeepers.IBCKeeper.ChannelKeeper,
+        appKeepers.IBCKeeper.ConnectionKeeper,
+        appKeepers.IBCKeeper.ClientKeeper,
+        NewProviderRegistryAdapter(appKeepers.ProviderKeeper),
+    )
 	// Register the proposal types
 	// Deprecated: Avoid adding new handlers, instead use the new proposal flow
 	// by granting the governance module the right to execute the message.

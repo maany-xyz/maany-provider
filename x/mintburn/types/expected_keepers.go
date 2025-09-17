@@ -1,9 +1,9 @@
 package types
 
 import (
-	"context"
+    "context"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+    sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type BankKeeper interface {
@@ -22,5 +22,14 @@ type BankKeeper interface {
 
 
 type AccountKeeper interface {
-	GetModuleAddress(name string) sdk.AccAddress
+    GetModuleAddress(name string) sdk.AccAddress
+}
+
+// ProviderConsumerRegistry defines the minimal CCV provider interface mintburn
+// uses to validate whether a local IBC client ID corresponds to a registered
+// consumer chain. Implemented by an adapter around the CCV Provider keeper.
+type ProviderConsumerRegistry interface {
+    // IsConsumerClientRegistered returns true if the given local clientID on the
+    // provider tracks the given consumer chain-id (full id) as a registered consumer.
+    IsConsumerClientRegistered(ctx sdk.Context, clientID string, consumerChainID string) bool
 }

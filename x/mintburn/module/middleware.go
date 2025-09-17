@@ -78,22 +78,27 @@ func (im IBCMiddleware) HandleChannelIdStorage(
 	if !found {
 		return fmt.Errorf("connection %s not found", connectionID)
 	}
-	clientID := connection.Counterparty.ClientId
-	clientState, found := im.keeper.ClientKeeper.GetClientState(ctx, clientID)
-	if !found {
-		return fmt.Errorf("client state for %s not found", clientID)
-	}
-	tmClientState, ok := clientState.(*ibctmtypes.ClientState)
-	if !ok {
-		return fmt.Errorf("unexpected client state type")
-	}
+    // Use the local client ID from the connection for provider-side validation
+    localClientID := connection.GetClientID()
+    clientState, found := im.keeper.ClientKeeper.GetClientState(ctx, localClientID)
+    if !found {
+        return fmt.Errorf("client state for %s not found", localClientID)
+    }
+    tmClientState, ok := clientState.(*ibctmtypes.ClientState)
+    if !ok {
+        return fmt.Errorf("unexpected client state type")
+    }
     // Chain-id allowlist: only allow channels for explicitly allowed chain-ids.
     // For now, also allow hardcoded "maanydex" until params/genesis wiring exists.
     counterpartyChainID := tmClientState.ChainId
-    allowedChain := (counterpartyChainID == "maanydex") || im.keeper.IsAllowedConsumerChain(ctx, counterpartyChainID)
+    // First, consult provider registry if available: require that local client
+    // tracks the specific registered consumer chain-id. If provider registry is
+    // not wired, fall back to allow-list by chain-id for now.
+    regOK := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientID, counterpartyChainID)
+    allowedChain := regOK || (counterpartyChainID == "maanydex") || im.keeper.IsAllowedConsumerChain(ctx, counterpartyChainID)
     if !allowedChain {
         ctx.Logger().Info("mintburn: ignoring transfer channel; counterparty chain-id not allow-listed",
-            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID, "provider_reg_ok", regOK)
         return nil
     }
     if isOpening {
@@ -280,15 +285,28 @@ func (im IBCMiddleware) OnRecvPacket(
 
 
 func (im IBCMiddleware) OnAcknowledgementPacket(
-	ctx sdk.Context,
-	packet channeltypes.Packet,
-	acknowledgement []byte,
-	relayer sdk.AccAddress,
+    ctx sdk.Context,
+    packet channeltypes.Packet,
+    acknowledgement []byte,
+    relayer sdk.AccAddress,
 ) error {
-	ctx.Logger().Info("mintburn/provider: ack passthrough",
-		"src_port", packet.SourcePort, "src_channel", packet.SourceChannel,
-		"dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel,
-		"seq", packet.Sequence)
-	return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
+    // Log rich context about outbound transfers (provider -> consumer)
+    var data ibctransfertypes.FungibleTokenPacketData
+    if err := json.Unmarshal(packet.GetData(), &data); err == nil {
+        ctx.Logger().Info("mintburn/provider: ack passthrough (outbound transfer)",
+            "src_port", packet.SourcePort, "src_channel", packet.SourceChannel,
+            "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel,
+            "seq", packet.Sequence,
+            "sender", data.Sender, "receiver", data.Receiver,
+            "denom", data.Denom, "amount", data.Amount,
+        )
+    } else {
+        ctx.Logger().Info("mintburn/provider: ack passthrough (non-transfer or undecodable packet)",
+            "src_port", packet.SourcePort, "src_channel", packet.SourceChannel,
+            "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel,
+            "seq", packet.Sequence,
+        )
+    }
+    return im.app.OnAcknowledgementPacket(ctx, packet, acknowledgement, relayer)
 
 }
