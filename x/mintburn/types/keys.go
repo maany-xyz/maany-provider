@@ -26,11 +26,42 @@ var EscrowIndexPrefix = []byte{0x02}
 // Authorized ICA address per consumer chain: consumer_chain_id -> bech32 addr bytes
 var AuthorizedICAPrefix = []byte{0x03}
 
+// NormalizeChainIDBase returns the base chain-id by stripping a single trailing
+// "-<digits>" revision suffix if present. Examples:
+//   "maanydex-1" -> "maanydex"
+//   "chain-test" -> "chain-test" (unchanged)
+//   "foo-abc" -> "foo-abc" (unchanged)
+func NormalizeChainIDBase(chainID string) string {
+    if len(chainID) == 0 {
+        return chainID
+    }
+    // Find last '-'
+    last := -1
+    for i := len(chainID) - 1; i >= 0; i-- {
+        if chainID[i] == '-' {
+            last = i
+            break
+        }
+    }
+    if last <= 0 || last == len(chainID)-1 {
+        return chainID
+    }
+    // Ensure suffix is all digits
+    for j := last + 1; j < len(chainID); j++ {
+        c := chainID[j]
+        if c < '0' || c > '9' {
+            return chainID
+        }
+    }
+    return chainID[:last]
+}
+
 // MintburnEscrowChannelIDFor derives a synthetic "channel id" string used to
-// compute a dedicated ICS-20 escrow address per consumer chain-id.
-// It does not need to correspond to a real IBC channel.
+// compute a dedicated ICS-20 escrow address per consumer (normalized by base
+// chain-id). It does not need to correspond to a real IBC channel.
 func MintburnEscrowChannelIDFor(consumerChainID string) string {
-    return "mintburn-" + consumerChainID
+    base := NormalizeChainIDBase(consumerChainID)
+    return "mintburn-" + base
 }
 
 func EscrowKeyByID(escrowID string) []byte {
