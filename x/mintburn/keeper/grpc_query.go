@@ -1,11 +1,12 @@
 package keeper
 
 import (
-	"context"
+    "context"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    "cosmossdk.io/store/prefix"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
 
 	"github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
@@ -15,7 +16,7 @@ var _ types.QueryServer = queryServer{}
 
 // NewQueryServer returns a types.QueryServer backed by the given keeper.
 func NewQueryServer(k Keeper) types.QueryServer {
-	return queryServer{k}
+    return queryServer{k}
 }
 
 // Escrow returns a single escrow by (consumer_chain_id, denom).
@@ -77,4 +78,37 @@ func (q queryServer) AuthorizedICA(ctx context.Context, req *types.QueryAuthoriz
         return &types.QueryAuthorizedICAResponse{IcaAddress: "", Found: false}, nil
     }
     return &types.QueryAuthorizedICAResponse{IcaAddress: addr, Found: true}, nil
+}
+
+// AllowedChannels returns all channel-ids recorded for a consumer chain
+func (q queryServer) AllowedChannels(ctx context.Context, req *types.QueryAllowedChannelsRequest) (*types.QueryAllowedChannelsResponse, error) {
+    if req == nil || req.ConsumerChainId == "" {
+        return nil, status.Error(codes.InvalidArgument, "consumer_chain_id is required")
+    }
+    sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+    // Iterate prefix "allowed-channel-by-chain/" + consumer + "/"
+    ps := prefix.NewStore(sdkCtx.KVStore(q.StoreKey), []byte("allowed-channel-by-chain/"))
+    pfx := append([]byte(req.ConsumerChainId), '/')
+    it := ps.Iterator(pfx, nil)
+    defer it.Close()
+
+    out := &types.QueryAllowedChannelsResponse{ChannelIds: []string{}}
+    for ; it.Valid(); it.Next() {
+        key := it.Key() // format: consumer + '/' + channelID
+        // extract channelID after last '/'
+        last := -1
+        for i := len(key) - 1; i >= 0; i-- { if key[i] == '/' { last = i; break } }
+        if last >= 0 && last+1 < len(key) {
+            out.ChannelIds = append(out.ChannelIds, string(key[last+1:]))
+        }
+    }
+    return out, nil
+}
+
+// Params returns current module params
+func (q queryServer) Params(ctx context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+    sdkCtx := sdk.UnwrapSDKContext(ctx)
+    p := q.GetParams(sdkCtx)
+    return &types.QueryParamsResponse{Params: &p}, nil
 }

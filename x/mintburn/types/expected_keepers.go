@@ -25,6 +25,11 @@ type AccountKeeper interface {
     GetModuleAddress(name string) sdk.AccAddress
 }
 
+// Minimal staking keeper interface to resolve the chain's native base denom
+type StakingKeeper interface {
+    BondDenom(ctx sdk.Context) string
+}
+
 // ProviderConsumerRegistry defines the minimal CCV provider interface mintburn
 // uses to validate whether a local IBC client ID corresponds to a registered
 // consumer chain. Implemented by an adapter around the CCV Provider keeper.

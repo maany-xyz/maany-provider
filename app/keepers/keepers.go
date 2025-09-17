@@ -385,6 +385,7 @@ func NewAppKeeper(
         appKeepers.GetSubspace(mintburntypes.ModuleName),
         appKeepers.AccountKeeper,
         appKeepers.BankKeeper,
+        *appKeepers.StakingKeeper,
         appKeepers.IBCKeeper.ChannelKeeper,
         appKeepers.IBCKeeper.ConnectionKeeper,
         appKeepers.IBCKeeper.ClientKeeper,

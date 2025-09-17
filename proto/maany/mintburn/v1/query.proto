@@ -4,6 +4,7 @@ package maany.mintburn.v1;
 import "google/api/annotations.proto";
 import "gogoproto/gogo.proto";
 import "maany/mintburn/v1/escrow.proto";
+import "maany/mintburn/v1/params.proto";
 
 // ibc-go proofs
 import "ibc/core/commitment/v1/commitment.proto"; // for MerkleProof
@@ -26,6 +27,16 @@ service Query {
   // Return the authorized ICA address for a consumer chain, if any
   rpc AuthorizedICA(QueryAuthorizedICARequest) returns (QueryAuthorizedICAResponse) {
     option (google.api.http).get = "/maany/mintburn/v1/authorized_ica/{consumer_chain_id}";
+  }
+
+  // List transfer channel-ids that mintburn recorded for a consumer chain.
+  rpc AllowedChannels(QueryAllowedChannelsRequest) returns (QueryAllowedChannelsResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/allowed_channels/{consumer_chain_id}";
+  }
+
+  // Return current mintburn module params
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/maany/mintburn/v1/params";
   }
 }
 
@@ -77,3 +88,11 @@ message QueryAuthorizedICAResponse {
   string ica_address = 1; // empty if not found
   bool   found       = 2;
 }
+
+// Allowed channels per consumer
+message QueryAllowedChannelsRequest { string consumer_chain_id = 1; }
+message QueryAllowedChannelsResponse { repeated string channel_ids = 1; }
+
+// Params
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }

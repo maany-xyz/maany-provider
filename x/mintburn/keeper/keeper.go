@@ -36,6 +36,7 @@ type Keeper struct {
     paramSpace       paramstypes.Subspace
     accountKeeper    mintburntypes.AccountKeeper
     bankKeeper       mintburntypes.BankKeeper
+    stakingKeeper    mintburntypes.StakingKeeper
     ChannelKeeper    ChannelKeeper
     ConnectionKeeper ConnectionKeeper
     ClientKeeper     ClientKeeper
@@ -50,6 +51,7 @@ func NewKeeper(
     paramSpace paramstypes.Subspace,
     accountKeeper mintburntypes.AccountKeeper,
     bankKeeper mintburntypes.BankKeeper,
+    stakingKeeper mintburntypes.StakingKeeper,
     channelKeeper ChannelKeeper,
     connectionKeeper ConnectionKeeper,
     clientKeeper ClientKeeper,
@@ -62,6 +64,7 @@ func NewKeeper(
         paramSpace:       paramSpace,
         accountKeeper:    accountKeeper,
         bankKeeper:       bankKeeper,
+        stakingKeeper:    stakingKeeper,
         ChannelKeeper:    channelKeeper,
         ConnectionKeeper: connectionKeeper,
         ClientKeeper:     clientKeeper,
@@ -104,6 +107,14 @@ func (k Keeper) IsAllowedConsumerByParams(ctx sdk.Context, chainID string) bool 
         }
     }
     return false
+}
+
+// BaseDenom returns the chain's native staking/bond denom
+func (k Keeper) BaseDenom(ctx sdk.Context) string {
+    if k.stakingKeeper == nil {
+        return "" // should not happen in app wiring
+    }
+    return k.stakingKeeper.BondDenom(ctx)
 }
 
 // SetParams sets the module parameters.

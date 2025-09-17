@@ -266,7 +266,7 @@ func (im IBCMiddleware) OnRecvPacket(
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unauthorized channel"))
     }
 
-    // Resolve base denom and verify it matches your provider base (e.g., "umaany").
+    // Resolve base denom and verify it matches the provider base denom
     // ReceiverChainIsSource must use local (destination) identifiers on recv.
     baseDenom := data.Denom
     if !ibctransfertypes.ReceiverChainIsSource(packet.DestinationPort, packet.DestinationChannel, data.Denom) {
@@ -274,7 +274,8 @@ func (im IBCMiddleware) OnRecvPacket(
         baseDenom = trace.BaseDenom
     }
     ctx.Logger().Info("mintburn: resolved base denom", "base_denom", baseDenom)
-    if baseDenom != "umaany" { // or "stake" depending on your mainnet minimal denom
+    nativeDenom := im.keeper.BaseDenom(ctx)
+    if baseDenom != nativeDenom {
         // Not our path -> let transfer app mint a voucher
         ctx.Logger().Info("mintburn: skip recv — base denom not provider base", "base_denom", baseDenom)
         return im.app.OnRecvPacket(ctx, packet, relayer)
@@ -314,7 +315,7 @@ func (im IBCMiddleware) OnRecvPacket(
 
     mintburnEscrowID := mintburntypes.MintburnEscrowChannelIDFor(tm.ChainId)
     escrowAddr := ibctransfertypes.GetEscrowAddress("transfer", mintburnEscrowID)
-    coin := sdk.NewCoin("umaany", amt)
+    coin := sdk.NewCoin(nativeDenom, amt)
 
     ctx.Logger().Info("mintburn: releasing from escrow",
         "amount", coin.String(), "to", rcpt.String(), "escrow", escrowAddr.String())
