@@ -134,8 +134,6 @@ Note: CLI flags and output may vary slightly by SDK version; use `--help` to see
 
 Security/Authorization
 
-- Enforce ICA only on CLAIMED: remove the temporary “recipient fallback” and require
-  the consumer’s authorized ICA to mark CLAIMED once ICA mapping exists.
 - Handshake hard‑fail mode: add a param to reject unauthorized transfer channel
   handshakes (return error) instead of silently ignoring in mintburn. Useful to prevent
   stray channels.
@@ -252,3 +250,10 @@ Risk profile
   minimizes config risk.
 - Accounting clarity: a single escrow per consumer family (base ID) simplifies
   mirrored supply tracking across revisions.
+
+# Testing
+
+- Test:
+  - attempt to open a transfer channel before CCV registry is ready:
+  - With reject_unauthorized_channels = true, handshake should error. - After CCV registry shows the consumer’s client mapping, handshake should
+    succeed.

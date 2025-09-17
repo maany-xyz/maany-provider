@@ -88,17 +88,27 @@ func (im IBCMiddleware) HandleChannelIdStorage(
     if !ok {
         return fmt.Errorf("unexpected client state type")
     }
-    // Chain-id allowlist: only allow channels for explicitly allowed chain-ids (via params)
+    // Authorization: provider registry (primary) and optional ops backdoors via params.
     counterpartyChainID := tmClientState.ChainId
-    // First, consult provider registry if available: require that local client
-    // tracks the specific registered consumer chain-id. If provider registry is
-    // not wired, fall back to allow-list by params.
+    params := im.keeper.GetParams(ctx)
     regOK := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientID, counterpartyChainID)
-    allowedByParams := im.keeper.IsAllowedConsumerByParams(ctx, counterpartyChainID)
-    allowedChain := regOK || allowedByParams
-    if !allowedChain {
-        ctx.Logger().Info("mintburn: ignoring transfer channel; not authorized by provider registry or params",
-            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID, "provider_reg_ok", regOK, "params_ok", allowedByParams)
+    // optional backdoors
+    allowedByClient := false
+    for _, cid := range params.AllowedClientIds {
+        if cid == localClientID { allowedByClient = true; break }
+    }
+    allowedByConn := false
+    for _, conn := range params.AllowedConnectionIds {
+        if conn == connectionID { allowedByConn = true; break }
+    }
+    authorized := regOK || allowedByClient || allowedByConn
+    if !authorized {
+        if params.RejectUnauthorizedChannels {
+            return fmt.Errorf("mintburn: unauthorized transfer channel (chain-id=%s client-id=%s connection-id=%s)", counterpartyChainID, localClientID, connectionID)
+        }
+        ctx.Logger().Info("mintburn: ignoring transfer channel; not authorized",
+            "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID,
+            "provider_reg_ok", regOK, "allowed_client", allowedByClient, "allowed_connection", allowedByConn)
         return nil
     }
     if isOpening {
@@ -218,6 +228,39 @@ func (im IBCMiddleware) OnRecvPacket(
         return im.app.OnRecvPacket(ctx, packet, relayer)
     }
 
+    // Second line of defense: re-check authorization against provider registry and optional backdoors
+    chAuth, found := im.keeper.ChannelKeeper.GetChannel(ctx, packet.DestinationPort, packet.DestinationChannel)
+    if !found || len(chAuth.ConnectionHops) == 0 {
+        ctx.Logger().Error("mintburn: recv on unknown channel", "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel)
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown channel"))
+    }
+    connIDAuth := chAuth.ConnectionHops[0]
+    connAuth, found := im.keeper.ConnectionKeeper.GetConnection(ctx, connIDAuth)
+    if !found {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown connection"))
+    }
+    localClientIDAuth := connAuth.GetClientID()
+    cstateAuth, found := im.keeper.ClientKeeper.GetClientState(ctx, localClientIDAuth)
+    if !found {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown client state"))
+    }
+    tmAuth, ok := cstateAuth.(*ibctmtypes.ClientState)
+    if !ok {
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unexpected client state type"))
+    }
+    paramsAuth := im.keeper.GetParams(ctx)
+    regOKAuth := (im.keeper.ProviderRegistry() != nil) && im.keeper.ProviderRegistry().IsConsumerClientRegistered(ctx, localClientIDAuth, tmAuth.ChainId)
+    allowedByClientAuth := false
+    for _, cid := range paramsAuth.AllowedClientIds { if cid == localClientIDAuth { allowedByClientAuth = true; break } }
+    allowedByConnAuth := false
+    for _, cID := range paramsAuth.AllowedConnectionIds { if cID == connIDAuth { allowedByConnAuth = true; break } }
+    if !(regOKAuth || allowedByClientAuth || allowedByConnAuth) {
+        ctx.Logger().Error("mintburn: recv unauthorized — not authorized by provider registry or params",
+            "dst_channel", packet.DestinationChannel, "local_client_id", localClientIDAuth, "connection_id", connIDAuth,
+            "counterparty_chain_id", tmAuth.ChainId, "provider_reg_ok", regOKAuth, "allowed_client", allowedByClientAuth, "allowed_connection", allowedByConnAuth)
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unauthorized channel"))
+    }
+
     // Resolve base denom and verify it matches your provider base (e.g., "umaany").
     // ReceiverChainIsSource must use local (destination) identifiers on recv.
     baseDenom := data.Denom
@@ -255,7 +298,7 @@ func (im IBCMiddleware) OnRecvPacket(
     if !found {
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown connection"))
     }
-    cstate, found := im.keeper.ClientKeeper.GetClientState(ctx, conn.Counterparty.ClientId)
+    cstate, found := im.keeper.ClientKeeper.GetClientState(ctx, conn.GetClientID())
     if !found {
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unknown client state"))
     }

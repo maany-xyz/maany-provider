@@ -6,8 +6,18 @@ option go_package = "github.com/maany-xyz/maany-provider/x/mintburn/types";
 
 // Params defines the mintburn module parameters.
 message Params {
-  // Full consumer chain-ids authorized for mintburn operations (in addition to
-  // the CCV Provider registry check when available).
+  // Deprecated: full consumer chain-ids. Retained for backward compatibility,
+  // but not used when registry-only gating is enabled.
   repeated string allowed_consumers = 1;
-}
 
+  // If true, unauthorized transfer channel handshakes are rejected (handshake errors).
+  bool reject_unauthorized_channels = 2;
+
+  // Optional ops backdoor: explicitly allow these local client IDs (provider side)
+  // to pass authorization, in addition to the Provider registry.
+  repeated string allowed_client_ids = 3;
+
+  // Optional ops backdoor: explicitly allow these local connection IDs to pass
+  // authorization, in addition to the Provider registry.
+  repeated string allowed_connection_ids = 4;
+}

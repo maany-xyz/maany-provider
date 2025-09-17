@@ -9,6 +9,9 @@ import (
 // Keys for mintburn module parameters
 var (
     KeyAllowedConsumers = []byte("AllowedConsumers")
+    KeyRejectUnauthorizedChannels = []byte("RejectUnauthorizedChannels")
+    KeyAllowedClientIDs = []byte("AllowedClientIDs")
+    KeyAllowedConnectionIDs = []byte("AllowedConnectionIDs")
 )
 
 // DefaultParams returns the default params for the generated Params type
@@ -35,6 +38,9 @@ func ParamKeyTable() paramstypes.KeyTable {
 func (p *Params) ParamSetPairs() paramstypes.ParamSetPairs {
     return paramstypes.ParamSetPairs{
         paramstypes.NewParamSetPair(KeyAllowedConsumers, &p.AllowedConsumers, validateAllowedConsumers),
+        paramstypes.NewParamSetPair(KeyRejectUnauthorizedChannels, &p.RejectUnauthorizedChannels, validateBool),
+        paramstypes.NewParamSetPair(KeyAllowedClientIDs, &p.AllowedClientIds, validateStringSlice),
+        paramstypes.NewParamSetPair(KeyAllowedConnectionIDs, &p.AllowedConnectionIds, validateStringSlice),
     }
 }
 
@@ -47,6 +53,26 @@ func validateAllowedConsumers(i interface{}) error {
         if len(id) == 0 {
             return fmt.Errorf("allowed consumer chain-id must not be empty")
         }
+    }
+    return nil
+}
+
+func validateStringSlice(i interface{}) error {
+    v, ok := i.([]string)
+    if !ok {
+        return fmt.Errorf("invalid type for []string: %T", i)
+    }
+    for _, s := range v {
+        if len(s) == 0 {
+            return fmt.Errorf("string value must not be empty")
+        }
+    }
+    return nil
+}
+
+func validateBool(i interface{}) error {
+    if _, ok := i.(bool); !ok {
+        return fmt.Errorf("invalid type for bool: %T", i)
     }
     return nil
 }
