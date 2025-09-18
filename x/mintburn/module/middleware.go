@@ -106,9 +106,11 @@ func (im IBCMiddleware) HandleChannelIdStorage(
     }
     authorized := (regOK && allowedByConsumer) || allowedByClient || allowedByConn
     if !authorized {
-        if params.RejectUnauthorizedChannels {
+        // Hard-fail only when registry is NOT OK and reject flag is set.
+        if !regOK && params.RejectUnauthorizedChannels {
             return fmt.Errorf("mintburn: unauthorized transfer channel (chain-id=%s client-id=%s connection-id=%s)", counterpartyChainID, localClientID, connectionID)
         }
+        // Otherwise, let the channel open but do not allow-list it for mintburn.
         ctx.Logger().Info("mintburn: ignoring transfer channel; not authorized",
             "channel_id", channelID, "counterparty_chain_id", counterpartyChainID, "local_client_id", localClientID,
             "provider_reg_ok", regOK, "allowed_consumer", allowedByConsumer, "allowed_client", allowedByClient, "allowed_connection", allowedByConn)

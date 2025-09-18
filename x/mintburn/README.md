@@ -34,6 +34,10 @@ Notes:
 
 - These are full chain‑ids (including revision suffix when present), used for authorization. You can add/remove entries later via governance (see below).
 - The CCV Provider registry remains the primary authorization source; params are a secondary gate.
+- Behavior when opening transfer channels:
+  - Registry OK + in `allowed_consumers` → channel opens and is allow‑listed for mintburn.
+  - Registry OK but not in `allowed_consumers` → channel opens; mintburn ignores (normal ICS‑20 vouchers apply).
+  - Registry NOT OK → if `reject_unauthorized_channels` is true, handshake aborts; otherwise channel opens but mintburn ignores.
 
 ## Update via Governance (ParamChange)
 
@@ -135,19 +139,8 @@ Note: CLI flags and output may vary slightly by SDK version; use `--help` to see
 
 # TASKS
 
-Security/Authorization
-
-- Handshake hard‑fail mode: add a param to reject unauthorized transfer channel
-  handshakes (return error) instead of silently ignoring in mintburn. Useful to prevent
-  stray channels. -> IMPLEMENTED
-- Provider registry check depth: optionally verify the transfer connection matches the
-  CCV connection for that consumer (same local client/connection), not just “clientID
-  belongs to consumer”.
-
 Configuration/Params
 
-- Base denom param: replace hardcoded “umaany” with a module param (and optional
-  multiple base denoms if needed).
 - AllowedConsumers ergonomics: keep full chain‑id for auth (safe), but add CLI helper
   to append the next revision quickly (quality‑of‑life).
 
@@ -197,12 +190,6 @@ Operations/Docs
   - Param update (if needed),
   - CLAIMED via ICA,
   - Verify dedicated escrow funded and releases working.
-
-If you want, I can take the first two concrete steps next:
-
-- Add a base‑denom param + CLI/query hook.
-- Tighten CLAIMED to require ICA (no fallback), with a transitional param/flag if you
-  want a grace period.
 
 # Upgrading Logic for consumer chain - Mintburn
 
@@ -262,3 +249,7 @@ Risk profile
     succeed.
 
 `maanypd tx ibc-transfer transfer transfer channel-2 maany-dex19k2p7rdqvjcm7yq57c6ntgsfna857pq79fgmpt 50000000umaany --from val --gas auto --gas-adjustment 1.6 --fees 190000umaany --keyring-backend test --chain-id maany-local-1 -y`
+
+## Multiple Consumers
+
+You can have many CCV‑registered consumers. Enable mintburn only for those listed in `allowed_consumers` (e.g., `maanydex-1`). All other consumers open normal ICS‑20 transfer channels and use voucher logic; mintburn does not intercept their packets.
