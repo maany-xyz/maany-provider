@@ -133,7 +133,10 @@ func (k Keeper) MarkEscrowClaimed(goCtx context.Context, msg *types.MsgMarkEscro
     escrowAddr := ibctransfertypes.GetEscrowAddress("transfer", mintburnEscrowID)
     modAddr := k.accountKeeper.GetModuleAddress(types.ModuleName)
     // Enforce that escrowed amount is in the chain's native base denom
-    nativeDenom := k.BaseDenom(ctx)
+    nativeDenom, err := k.BaseDenom(ctx)
+    if err != nil {
+        return nil, err
+    }
     if esc.Amount.Denom != nativeDenom {
         return nil, sdkerrors.ErrInvalidCoins
     }

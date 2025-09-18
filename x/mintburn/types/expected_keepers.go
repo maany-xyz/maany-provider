@@ -27,7 +27,7 @@ type AccountKeeper interface {
 
 // Minimal staking keeper interface to resolve the chain's native base denom
 type StakingKeeper interface {
-    BondDenom(ctx sdk.Context) string
+    BondDenom(ctx context.Context) (string, error)
 }
 
 // ProviderConsumerRegistry defines the minimal CCV provider interface mintburn

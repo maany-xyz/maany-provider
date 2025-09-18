@@ -274,7 +274,11 @@ func (im IBCMiddleware) OnRecvPacket(
         baseDenom = trace.BaseDenom
     }
     ctx.Logger().Info("mintburn: resolved base denom", "base_denom", baseDenom)
-    nativeDenom := im.keeper.BaseDenom(ctx)
+    nativeDenom, err := im.keeper.BaseDenom(ctx)
+    if err != nil {
+        ctx.Logger().Error("mintburn: failed to resolve base denom", "err", err)
+        return channeltypes.NewErrorAcknowledgement(fmt.Errorf("base denom unavailable"))
+    }
     if baseDenom != nativeDenom {
         // Not our path -> let transfer app mint a voucher
         ctx.Logger().Info("mintburn: skip recv — base denom not provider base", "base_denom", baseDenom)

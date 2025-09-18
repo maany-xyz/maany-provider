@@ -4,6 +4,7 @@ import (
     "cosmossdk.io/log"
     "cosmossdk.io/store/prefix"
     storetypes "cosmossdk.io/store/types"
+    "fmt"
     "github.com/cosmos/cosmos-sdk/codec"
     sdk "github.com/cosmos/cosmos-sdk/types"
     paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -110,11 +111,16 @@ func (k Keeper) IsAllowedConsumerByParams(ctx sdk.Context, chainID string) bool 
 }
 
 // BaseDenom returns the chain's native staking/bond denom
-func (k Keeper) BaseDenom(ctx sdk.Context) string {
+func (k Keeper) BaseDenom(ctx sdk.Context) (string, error) {
     if k.stakingKeeper == nil {
-        return "" // should not happen in app wiring
+        return "", fmt.Errorf("staking keeper not wired")
     }
-    return k.stakingKeeper.BondDenom(ctx)
+    // staking keeper in SDK v0.50 expects context.Context
+    denom, err := k.stakingKeeper.BondDenom(ctx)
+    if err != nil {
+        return "", err
+    }
+    return denom, nil
 }
 
 // SetParams sets the module parameters.
