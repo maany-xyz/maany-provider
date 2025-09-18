@@ -311,13 +311,15 @@ func NewAppKeeper(
 	)
 
 
-	appKeepers.BlockRewardsKeeper = blockrewardskeeper.NewKeeper(
-		appCodec,
-		appKeepers.keys[blockrewardsmoduletypes.StoreKey],
-    	appKeepers.BankKeeper,
+    appKeepers.BlockRewardsKeeper = blockrewardskeeper.NewKeeper(
+        appCodec,
+        appKeepers.keys[blockrewardsmoduletypes.StoreKey],
+        appKeepers.BankKeeper,
         *appKeepers.StakingKeeper,
-    	appKeepers.AccountKeeper,
-	)
+        appKeepers.AccountKeeper,
+        appKeepers.GetSubspace(blockrewardsmoduletypes.ModuleName),
+        authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+    )
 
 	// UpgradeKeeper must be created before IBCKeeper
 	appKeepers.UpgradeKeeper = upgradekeeper.NewKeeper(
@@ -615,7 +617,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ratelimittypes.ModuleName).WithKeyTable(ratelimittypes.ParamKeyTable())
 	paramsKeeper.Subspace(providertypes.ModuleName).WithKeyTable(providertypes.ParamKeyTable())
 	paramsKeeper.Subspace(wasmtypes.ModuleName)
-    paramsKeeper.Subspace(blockrewardsmoduletypes.ModuleName)
+    paramsKeeper.Subspace(blockrewardsmoduletypes.ModuleName).WithKeyTable(blockrewardsmoduletypes.ParamKeyTable())
     paramsKeeper.Subspace(mintburntypes.ModuleName).WithKeyTable(mintburntypes.ParamKeyTable())
 
 

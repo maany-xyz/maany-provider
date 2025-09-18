@@ -1,22 +1,23 @@
 package blockrewards
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
+    "context"
+    "encoding/json"
+    "fmt"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/spf13/cobra"
+    "github.com/cosmos/cosmos-sdk/client"
+    "github.com/cosmos/cosmos-sdk/types/module"
+    "github.com/grpc-ecosystem/grpc-gateway/runtime"
+    "github.com/spf13/cobra"
 
-	"cosmossdk.io/core/appmodule"
-	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	keeper "github.com/maany-xyz/maany-provider/x/blockrewards/keeper"
-	"github.com/maany-xyz/maany-provider/x/blockrewards/types"
+    "cosmossdk.io/core/appmodule"
+    autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
+    abci "github.com/cometbft/cometbft/abci/types"
+    "github.com/cosmos/cosmos-sdk/codec"
+    cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+    sdk "github.com/cosmos/cosmos-sdk/types"
+    keeper "github.com/maany-xyz/maany-provider/x/blockrewards/keeper"
+    "github.com/maany-xyz/maany-provider/x/blockrewards/types"
 )
 
 var (
@@ -76,6 +77,8 @@ func (AppModule) QuerierRoute() string { return types.ModuleName }
 
 // RegisterServices registers the module's services.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
+    types.RegisterMsgServer(cfg.MsgServer(), am.keeper)
+    types.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServer(am.keeper))
 }
 
 func (am AppModule) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
@@ -115,10 +118,10 @@ func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestFinalizeBlock) {
 
 // EndBlock executes all logic for the blockrewards module at the end of a block.
 func (am AppModule) EndBlock(ctx context.Context) error {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	sdkCtx.Logger().Info("Executing EndBlock for blockrewards module")
-	EndBlocker(sdkCtx, ctx, am.keeper)
-	return nil
+    sdkCtx := sdk.UnwrapSDKContext(ctx)
+    sdkCtx.Logger().Info("Executing EndBlock for blockrewards module")
+    EndBlocker(sdkCtx, ctx, am.keeper)
+    return nil
 }
 // func (am AppModule) EndBlock(context Conte) (error) {
 // 	ctx.Logger().Info("Entering EndBlock for blockrewards module")
@@ -126,23 +129,55 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 // 	return nil
 // }
 // EndBlocker is the core logic for the blockrewards module at the end of each block.
-func EndBlocker (sdkContext sdk.Context, ctx context.Context, k keeper.Keeper) {	
-	// if sdkContext.TxBytes() == nil || len(sdkContext.TxBytes()) == 0 {
-    //     sdkContext.Logger().Info("Empty block detected, no transactions included.")
-    //     return // Skip rewards for empty blocks
-    // }
-	params, err := k.GetParams(sdkContext)
-    if err != nil {
-        sdkContext.Logger().Error("failed to get block reward params in EndBlocker", "error", err.Error())
+func EndBlocker (sdkContext sdk.Context, ctx context.Context, k keeper.Keeper) {
+    // Retrieve runtime params (governable via x/params)
+    mp := k.GetModuleParams(sdkContext)
+
+    // Determine effective reward with optional halving schedule
+    amt := mp.RewardAmount.Amount
+    if mp.HalvingInterval > 0 {
+        height := uint64(sdkContext.BlockHeight())
+        halvings := height / mp.HalvingInterval
+        for i := uint64(0); i < halvings && !amt.IsZero(); i++ {
+            // integer halving
+            amt = amt.QuoRaw(2)
+        }
+    }
+
+    if amt.IsZero() {
+        // nothing to distribute
         return
     }
 
-    // Use the block_reward_amount from the retrieved params
-    rewardAmount := sdk.NewCoins(params.BlockRewardAmount)
+    coin := sdk.NewCoin(mp.RewardAmount.Denom, amt)
+    reward := sdk.NewCoins(coin)
 
-	// Call the reward distribution logic from the Keeper
-	err2 := k.DistributeRewards(sdkContext, ctx, rewardAmount)
-	if err2 != nil {
-		sdkContext.Logger().Error("error in EndBlocker ", err2.Error())
-	}
+    // Attempt distribution; if module account lacks funds, we'll log and stop.
+    if err := k.DistributeRewards(sdkContext, ctx, reward); err != nil {
+        sdkContext.Logger().Error("blockrewards: distribution failed", "err", err)
+    }
+}
+
+// AutoCLIOptions returns CLI wiring for v0.50 autocli
+func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
+    return &autocliv1.ModuleOptions{
+        Query: &autocliv1.ServiceCommandDescriptor{
+            Service: "maany.blockrewards.v1.Query",
+            RpcCommandOptions: []*autocliv1.RpcCommandOptions{
+                {
+                    RpcMethod: "Params",
+                    Use:       "params",
+                    Short:     "Show blockrewards module params",
+                },
+                {
+                    RpcMethod: "EffectiveReward",
+                    Use:       "effective-reward",
+                    Short:     "Compute effective reward at a height",
+                    FlagOptions: map[string]*autocliv1.FlagOptions{
+                        "height": {Name: "at-height", Usage: "Block height to evaluate at (default: current)"},
+                    },
+                },
+            },
+        },
+    }
 }

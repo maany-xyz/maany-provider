@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -13,9 +12,12 @@ import (
 func (k Keeper) InitGenesis(ctx context.Context, genState *types.GenesisState) []abci.ValidatorUpdate {
     // Initialize module parameters
     sdkCtx := sdk.UnwrapSDKContext(ctx)
-    if err := k.SetParams(sdkCtx, genState.Params); err != nil {
-        panic(fmt.Sprintf("failed to set params in InitGenesis: %v", err))
+    // Map protobuf genesis params to runtime ModuleParams; keep default halving interval
+    mp := types.DefaultModuleParams()
+    if genState != nil {
+        mp.RewardAmount = genState.Params.BlockRewardAmount
     }
+    k.SetModuleParams(sdkCtx, mp)
     // Return validator updates if this module affects staking/validators
     return []abci.ValidatorUpdate{}
 }
@@ -23,11 +25,6 @@ func (k Keeper) InitGenesis(ctx context.Context, genState *types.GenesisState) [
 func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
     // Retrieve the module's parameters
     sdkCtx := sdk.UnwrapSDKContext(ctx)
-	params, err := k.GetParams(sdkCtx)
-    if err != nil {
-        return nil
-    }
-    return &types.GenesisState{
-        Params: params,
-    }
+    mp := k.GetModuleParams(sdkCtx)
+    return &types.GenesisState{Params: types.Params{BlockRewardAmount: mp.RewardAmount}}
 }

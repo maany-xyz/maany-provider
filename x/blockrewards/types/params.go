@@ -9,9 +9,9 @@ import (
 
 // DefaultParams returns the default parameters for the blockrewards module.
 func DefaultParams() Params {
-	return Params{
-		BlockRewardAmount: sdk.NewCoin("stake", math.NewInt(100000)),
-	}
+    return Params{
+        BlockRewardAmount: sdk.NewCoin(sdk.DefaultBondDenom, math.NewInt(100000)),
+    }
 }
 
 

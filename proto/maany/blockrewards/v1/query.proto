@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package maany.blockrewards.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "google/api/annotations.proto";
+import "cosmos/query/v1/query.proto";
+
+option go_package = "github.com/maany-xyz/maany-provider/x/blockrewards/types";
+
+// Query defines the gRPC query service for the blockrewards module.
+service Query {
+
+  // Params returns the current module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/maany/blockrewards/v1/params";
+  }
+
+  // EffectiveReward returns the effective per-block reward at a given height,
+  // after applying halving. If height is 0, current block height is used.
+  rpc EffectiveReward(QueryEffectiveRewardRequest) returns (QueryEffectiveRewardResponse) {
+    option (google.api.http).get = "/maany/blockrewards/v1/effective_reward";
+  }
+}
+
+message QueryParamsRequest {}
+
+message QueryModuleParams {
+  cosmos.base.v1beta1.Coin reward_amount = 1 [(gogoproto.nullable) = false];
+  uint64 halving_interval = 2;
+}
+
+message QueryParamsResponse {
+  QueryModuleParams params = 1 [(gogoproto.nullable) = false];
+}
+
+message QueryEffectiveRewardRequest {
+  uint64 height = 1; // optional; 0 means "use current"
+}
+
+message QueryEffectiveRewardResponse {
+  cosmos.base.v1beta1.Coin reward = 1 [(gogoproto.nullable) = false];
+}
