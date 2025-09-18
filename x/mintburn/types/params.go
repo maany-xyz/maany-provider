@@ -13,6 +13,7 @@ var (
     KeyAllowedClientIDs = []byte("AllowedClientIDs")
     KeyAllowedConnectionIDs = []byte("AllowedConnectionIDs")
     KeyAllowedFunders = []byte("AllowedFunders")
+    KeyEnforceSingleChannel = []byte("EnforceSingleChannel")
 )
 
 // DefaultParams returns the default params for the generated Params type
@@ -43,6 +44,7 @@ func (p *Params) ParamSetPairs() paramstypes.ParamSetPairs {
         paramstypes.NewParamSetPair(KeyAllowedClientIDs, &p.AllowedClientIds, validateStringSlice),
         paramstypes.NewParamSetPair(KeyAllowedConnectionIDs, &p.AllowedConnectionIds, validateStringSlice),
         paramstypes.NewParamSetPair(KeyAllowedFunders, &p.AllowedFunders, validateStringSlice),
+        paramstypes.NewParamSetPair(KeyEnforceSingleChannel, &p.EnforceSingleChannel, validateBool),
     }
 }
 

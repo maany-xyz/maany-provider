@@ -201,6 +201,25 @@ func (k Keeper) GetAnyAllowedChannelForChain(ctx sdk.Context, chainID string) (s
     return "", false
 }
 
+// Canonical channel per consumer chain-id
+func (k Keeper) SetCanonicalChannelForChain(ctx sdk.Context, chainID, channelID string) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("canonical-channel/"))
+    if channelID == "" {
+        ps.Delete([]byte(chainID))
+        return
+    }
+    ps.Set([]byte(chainID), []byte(channelID))
+}
+
+func (k Keeper) GetCanonicalChannelForChain(ctx sdk.Context, chainID string) (string, bool) {
+    ps := prefix.NewStore(ctx.KVStore(k.StoreKey), []byte("canonical-channel/"))
+    bz := ps.Get([]byte(chainID))
+    if bz == nil {
+        return "", false
+    }
+    return string(bz), true
+}
+
 // (canonical channel helpers intentionally omitted; multiple channels allowed for now)
 
 // (KV allow-list of consumer chain-ids removed; use params + provider registry)

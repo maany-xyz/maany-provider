@@ -24,4 +24,9 @@ message Params {
   // Addresses allowed to initiate escrow funding on the provider. If empty,
   // no one is allowed to call escrow-initial (strict by default).
   repeated string allowed_funders = 5;
+
+  // If true, only a single transfer channel per consumer is allow-listed for mintburn.
+  // A second authorized channel will be rejected at handshake. When false, additional
+  // channels may open but only the canonical channel is intercepted by mintburn.
+  bool enforce_single_channel = 6;
 }

@@ -1,8 +1,8 @@
 package mintburn
 
 import (
-    "encoding/json"
-    "fmt"
+	"encoding/json"
+	"fmt"
 
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
@@ -14,8 +14,8 @@ import (
 
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibctmtypes "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
-    mintburn "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
-    mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
+	mintburn "github.com/maany-xyz/maany-provider/x/mintburn/keeper"
+	mintburntypes "github.com/maany-xyz/maany-provider/x/mintburn/types"
 )
 
 type IBCMiddleware struct {
@@ -117,16 +117,31 @@ func (im IBCMiddleware) HandleChannelIdStorage(
         return nil
     }
     if isOpening {
+        // Enforce single canonical channel per consumer if configured
+        if canon, ok := im.keeper.GetCanonicalChannelForChain(ctx, counterpartyChainID); ok && canon != "" && canon != channelID {
+            if params.EnforceSingleChannel {
+                return fmt.Errorf("mintburn: canonical channel already set for %s (%s)", counterpartyChainID, canon)
+            }
+            // else: allow open but do not change canonical
+        }
         store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
         store.Set([]byte(channelID), []byte{1})
         // also track mapping chain-id -> channel for later escrow funding
         im.keeper.AddAllowedChannelForChain(ctx, counterpartyChainID, channelID)
+        // if no canonical set, set this as canonical
+        if _, ok := im.keeper.GetCanonicalChannelForChain(ctx, counterpartyChainID); !ok {
+            im.keeper.SetCanonicalChannelForChain(ctx, counterpartyChainID, channelID)
+        }
         ctx.Logger().Info("mintburn: allow-listed transfer channel",
             "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
     } else {
         store := prefix.NewStore(ctx.KVStore(im.keeper.StoreKey), []byte("allowed-channel/"))
         store.Delete([]byte(channelID))
         im.keeper.RemoveAllowedChannelForChain(ctx, counterpartyChainID, channelID)
+        // if canonical is being closed, clear it
+        if canon, ok := im.keeper.GetCanonicalChannelForChain(ctx, counterpartyChainID); ok && canon == channelID {
+            im.keeper.SetCanonicalChannelForChain(ctx, counterpartyChainID, "")
+        }
         ctx.Logger().Info("mintburn: removed transfer channel from allow-list",
             "channel_id", channelID, "counterparty_chain_id", counterpartyChainID)
     }
@@ -300,7 +315,7 @@ func (im IBCMiddleware) OnRecvPacket(
     }
 
     // RELEASE from the Provider escrow to the recipient (no voucher mint!) — use the dedicated mintburn escrow address
-    // Derive the consumer chain-id from the local channel/connection/client.
+    // Derive the consumer chain-id from the local channel/connection/client and enforce canonical-only interception
     ch, found := im.keeper.ChannelKeeper.GetChannel(ctx, packet.DestinationPort, packet.DestinationChannel)
     if !found || len(ch.ConnectionHops) == 0 {
         ctx.Logger().Error("mintburn: recv on unknown channel", "dst_port", packet.DestinationPort, "dst_channel", packet.DestinationChannel)
@@ -317,6 +332,14 @@ func (im IBCMiddleware) OnRecvPacket(
     tm, ok := cstate.(*ibctmtypes.ClientState)
     if !ok {
         return channeltypes.NewErrorAcknowledgement(fmt.Errorf("unexpected client state type"))
+    }
+
+    // Enforce canonical-only interception: if a canonical channel is set for this
+    // consumer and this packet arrived on a different channel, forward to transfer.
+    if canon, ok := im.keeper.GetCanonicalChannelForChain(ctx, tm.ChainId); ok && canon != "" && canon != packet.DestinationChannel {
+        ctx.Logger().Info("mintburn: non-canonical channel on recv; forwarding to transfer",
+            "consumer_chain_id", tm.ChainId, "dst_channel", packet.DestinationChannel, "canonical", canon)
+        return im.app.OnRecvPacket(ctx, packet, relayer)
     }
 
     mintburnEscrowID := mintburntypes.MintburnEscrowChannelIDFor(tm.ChainId)
