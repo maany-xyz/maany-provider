@@ -32,21 +32,44 @@ func (k Keeper) NextEscrowID(ctx sdk.Context) string {
 }
 
 func (k Keeper) EscrowInitial(goCtx context.Context, msg *types.MsgEscrowInitial) (*types.MsgEscrowInitialResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
+    ctx := sdk.UnwrapSDKContext(goCtx)
 
-	if !msg.Amount.IsValid() || !msg.Amount.Amount.IsPositive() {
-		return nil, sdkerrors.ErrInvalidCoins
-	}
-	sender, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return nil, sdkerrors.ErrInvalidAddress
-	}
+    if !msg.Amount.IsValid() || !msg.Amount.Amount.IsPositive() {
+        return nil, sdkerrors.ErrInvalidCoins
+    }
+    sender, err := sdk.AccAddressFromBech32(msg.Sender)
+    if err != nil {
+        return nil, sdkerrors.ErrInvalidAddress
+    }
 
-	// move funds into module (lock)
-	modAddr := k.accountKeeper.GetModuleAddress(types.ModuleName)
-	if err := k.bankKeeper.SendCoins(ctx, sender, modAddr, sdk.NewCoins(msg.Amount)); err != nil {
-		return nil, err
-	}
+    // Policy: consumer must be mintburn-enabled
+    params := k.GetParams(ctx)
+    enabledConsumer := false
+    for _, c := range params.AllowedConsumers { if c == msg.ConsumerChainId { enabledConsumer = true; break } }
+    if !enabledConsumer {
+        ctx.Logger().Error("mintburn: escrow-initial rejected — consumer not mintburn-enabled", "consumer_chain_id", msg.ConsumerChainId, "sender", msg.Sender)
+        return nil, sdkerrors.ErrUnauthorized
+    }
+
+    // Policy: sender must be in allowed funders (default: none)
+    allowedFunder := false
+    for _, a := range params.AllowedFunders { if a == msg.Sender { allowedFunder = true; break } }
+    if !allowedFunder {
+        ctx.Logger().Error("mintburn: escrow-initial rejected — sender not in AllowedFunders", "sender", msg.Sender)
+        return nil, sdkerrors.ErrUnauthorized
+    }
+
+    // Single active escrow (per consumer, denom): reject if a PENDING escrow already exists
+    if existing, ok := k.GetEscrow(ctx, msg.ConsumerChainId, msg.Amount.Denom); ok && existing.Status == types.EscrowStatus_ESCROW_STATUS_PENDING {
+        ctx.Logger().Error("mintburn: escrow-initial rejected — pending escrow exists", "consumer_chain_id", msg.ConsumerChainId, "denom", msg.Amount.Denom, "escrow_id", existing.EscrowId)
+        return nil, sdkerrors.ErrInvalidRequest
+    }
+
+    // move funds into module (lock)
+    modAddr := k.accountKeeper.GetModuleAddress(types.ModuleName)
+    if err := k.bankKeeper.SendCoins(ctx, sender, modAddr, sdk.NewCoins(msg.Amount)); err != nil {
+        return nil, err
+    }
 
 	// create escrow with a new escrow_id
 	esc := types.Escrow{

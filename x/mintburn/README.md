@@ -23,7 +23,11 @@ Example:
         "allowed_consumers": ["maanydex-1"],
         "reject_unauthorized_channels": true,
         "allowed_client_ids": [],
-        "allowed_connection_ids": []
+        "allowed_connection_ids": [],
+        "allowed_funders": [
+          "cosmos1...funder1",
+          "cosmos1...funder2"
+        ]
       }
     }
   }
@@ -60,8 +64,8 @@ Proposal JSON body (example):
 ```
 
 - `subspace`: must be `mintburn`.
-- `key`: `AllowedConsumers` (exact case).
-- `value`: JSON‑encoded array as a string.
+- `key`: `AllowedConsumers`, `RejectUnauthorizedChannels`, `AllowedClientIDs`, `AllowedConnectionIDs`, or `AllowedFunders`.
+- `value`: JSON‑encoded value as a string.
 
 CLI example (Cosmos SDK gov v1)
 
@@ -96,6 +100,32 @@ Notes:
 - Replace `<key>`, `<proposal-id>`, fee denom, and `<chain-id>` with your environment values.
 - Some networks use different base denoms and deposits/fees; adjust accordingly.
 
+Examples
+
+- Enable hard-fail (reject unauthorized handshakes):
+
+```
+{
+  "title": "Enable mintburn hard-fail",
+  "description": "Abort unauthorized transfer handshakes",
+  "changes": [
+    { "subspace": "mintburn", "key": "RejectUnauthorizedChannels", "value": "true" }
+  ]
+}
+```
+
+- Set allowed funders (only these addresses can call escrow-initial):
+
+```
+{
+  "title": "Set mintburn allowed funders",
+  "description": "Authorize specific funders for escrow-initial",
+  "changes": [
+    { "subspace": "mintburn", "key": "AllowedFunders", "value": "[\"cosmos1...funder1\",\"cosmos1...funder2\"]" }
+  ]
+}
+```
+
 ## Logs and Diagnostics
 
 Mintburn emits structured logs to help trace flows:
@@ -116,11 +146,6 @@ If releases fail, check:
 - Chain‑id spoofing: Do not authorize by normalized base names. Authorization uses the full chain‑id and/or the CCV registry.
 - Multiple channels: Mintburn supports multiple transfer lanes per consumer; all consumer → provider releases debit the same dedicated escrow address for that consumer.
 
-## Notes / Future Options
-
-- Base‑denom parameterization: The provider base denom (currently enforced in code) can be exposed as a module param if needed.
-- Authorization remains on full chain‑ids (and/or CCV registry), while escrow accounting is normalized by base chain‑id.
-
 ## Query Current Params
 
 You can query the current params (including `AllowedConsumers`) via the params module.
@@ -136,6 +161,12 @@ gaiad q params subspace mintburn -o json
 ```
 
 Note: CLI flags and output may vary slightly by SDK version; use `--help` to see available options.
+
+## Notes / Future Options
+
+- escrow logic: removal of PENDING escrows
+- Test: new channel (other consumer with transfer channel) -> are they blocked from mintburn
+- Upgrade logic: Consumer and Provider
 
 # TASKS
 

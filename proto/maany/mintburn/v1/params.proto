@@ -20,4 +20,8 @@ message Params {
   // Optional ops backdoor: explicitly allow these local connection IDs to pass
   // authorization, in addition to the Provider registry.
   repeated string allowed_connection_ids = 4;
+
+  // Addresses allowed to initiate escrow funding on the provider. If empty,
+  // no one is allowed to call escrow-initial (strict by default).
+  repeated string allowed_funders = 5;
 }
