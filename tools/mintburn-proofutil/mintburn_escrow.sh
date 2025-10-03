@@ -38,7 +38,7 @@ ALLOWED_PROVIDER_DENOM="umaany"
 MINT_DENOM="umaany"
 AMOUNT_DENOM="umaany"
 ESCROW_ID="1"
-RECIPIENT="maany-dex1c7j33khjnqf2s44t2aykshthjkpf50sfxzu7af"
+RECIPIENT="maanydex1g7hy29y8948qmz4me52xdcayu3a4zspw94puww"
 
 # NEW: ICA params (adjust as needed)
 ICA_CONTROLLER_CONNECTION_ID="connection-0"
