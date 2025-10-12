@@ -35,7 +35,6 @@ It serves as the **main hub** that secures, validates, and economically anchors 
 The Provider chain is responsible for:
 - Staking, validator management, and governance.
 - Escrow-based cross-chain minting (`x/mintburn`).
-- Cross-chain fee routing and budget enforcement (`x/policy`).
 - Block reward distribution and ecosystem wallet logic.
 - Chain registration, interchain security, and ICS management.
 
@@ -46,7 +45,6 @@ The Provider chain is responsible for:
 | Module | Purpose |
 |---------|----------|
 | **x/mintburn** | Handles escrow and mint logic for mirrored tokens on consumer chains. |
-| **x/policy** | Enforces spend limits, price impact caps, and MEV guardrails for ICA transactions. |
 | **x/blockrewards** | Manages validator and ecosystem reward emissions. |
 | **x/autolp / x/buyback** *(consumer-side)* | Complementary modules interacting with provider policy and rewards. |
 
