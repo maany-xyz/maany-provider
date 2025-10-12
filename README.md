@@ -1,6 +1,6 @@
 # Cosmos Hub (Gaia)
 
-![Banner!](https://miro.medium.com/max/2000/1*DHtmSfS_Efvuq8n2LAnhkA.png)
+![Maany-Banner](./.assets/banner.png)
 
 [![Project Status: Active -- The project has reached a stable, usable state and is being actively
 developed.](https://img.shields.io/badge/repo%20status-Active-green.svg)](https://www.repostatus.org/#active)
