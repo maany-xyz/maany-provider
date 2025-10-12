@@ -7,7 +7,7 @@ PROOF_SCRIPT="${SCRIPT_DIR}/create-merkleproof-genesis.sh"
 BUNDLE_OUT="${SCRIPT_DIR}/bundle.json"
 
 # Consumer chain config
-CONSUMER_CONFIG="$HOME/.neutrond"
+CONSUMER_CONFIG="$HOME/.maanydexd"
 GENESIS_PATH="${CONSUMER_CONFIG}/config/genesis.json"
 
 # Requirements
@@ -27,7 +27,7 @@ GAS="auto"
 GAS_ADJ="1.8"
 
 # Escrow params
-CONSUMER_CHAIN_ID="maanydex"
+CONSUMER_CHAIN_ID="maanydex-local-1"
 AMOUNT_VALUE="10000000000"
 DENOM="umaany"
 

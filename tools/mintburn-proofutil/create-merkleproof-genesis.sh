@@ -10,6 +10,26 @@ set -euo pipefail
 #
 # Requirements: curl, jq, base64, xxd, go (to run your proofutil)
 
+# Resolve script and repo roots so relative paths work regardless of cwd
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+find_repo_root() {
+  local dir="$SCRIPT_DIR"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -f "$dir/go.mod" ]]; then
+      printf '%s' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+REPO_ROOT="$(find_repo_root)"
+if [[ -z "$REPO_ROOT" ]]; then
+  echo "could not locate go.mod relative to script at $SCRIPT_DIR" >&2
+  exit 1
+fi
+
 node=""
 store_key=""
 data_hex=""         # e.g. 0131 (without 0x)
@@ -74,7 +94,7 @@ abci_url="${node}/abci_query?path=\"/store/${store_key}/key\"&data=0x${data_hex}
 proof_raw="$(curl -sS "$abci_url")"
 
 # 2) Transform to ICS-23 merkle proof via Go tool
-merkle_proof_json="$(go run ./tools/mintburn-proofutil <<< "$proof_raw")"
+merkle_proof_json="$(cd "$REPO_ROOT" && go run ./tools/mintburn-proofutil <<< "$proof_raw")"
 
 # 3) Derive value_b64 and hex_key from the NON-store proof
 value_b64="$(jq -r --arg sk "$store_key" '
